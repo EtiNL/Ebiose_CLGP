@@ -21,29 +21,21 @@ class CLGP(nn.Module):
     def __init__(self,
                  embed_dim: int,
                  # graph
-                 graph_encoder,
+                 Graph_encoder,
                  graph_encoder_config,
                  # text
-                 text_encoder,
+                 Text_encoder,
                  text_encoder_config,
                  context_length: int,
                  vocab_size: int,
-                 transformer_width: int,
-                 transformer_heads: int,
-                 transformer_layers: int
-                 ):
+                 transformer_width: int):
         super().__init__()
 
         self.context_length = context_length
 
-        self.gnn = graph_encoder(graph_encoder_config)
+        self.graph_encoder = Graph_encoder(graph_encoder_config)
 
-        self.transformer = text_encoder(
-            width=transformer_width,
-            layers=transformer_layers,
-            heads=transformer_heads,
-            attn_mask=self.build_attention_mask()
-        )
+        self.text_encoder = Text_encoder(text_encoder_config)
 
         self.vocab_size = vocab_size
         self.token_embedding = nn.Embedding(vocab_size, transformer_width)
@@ -60,19 +52,10 @@ class CLGP(nn.Module):
         nn.init.normal_(self.positional_embedding, std=0.01)
 
         #initialise graph_encoder
+        self.graph_encoder.initialize()
 
         #initialise text_encoder
-        proj_std = (self.transformer.width ** -0.5) * ((2 * self.transformer.layers) ** -0.5)
-        attn_std = self.transformer.width ** -0.5
-        fc_std = (2 * self.transformer.width) ** -0.5
-        for block in self.transformer.resblocks:
-            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
-
-        if self.text_projection is not None:
-            nn.init.normal_(self.text_projection, std=self.transformer.width ** -0.5)
+        self.text_encoder.initialize(self.text_projection)
 
 
     @property
@@ -87,7 +70,7 @@ class CLGP(nn.Module):
 
         x = x + self.positional_embedding.type(self.dtype)
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x)
+        x = self.text_encoder(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
 
@@ -98,7 +81,7 @@ class CLGP(nn.Module):
         return x
 
     def forward(self, image, text):
-        image_features = self.encode_image(image)
+        graph_features = self.encode_graph(image)
         text_features = self.encode_text(text)
 
-        return image_features, text_features 
+        return graph_features, text_features 
