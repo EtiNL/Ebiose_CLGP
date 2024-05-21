@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import torch
 from torch import nn
+import yaml
 
 class LayerNorm(nn.LayerNorm):
     """Subclass torch's LayerNorm to handle fp16."""
@@ -41,11 +42,17 @@ class ResidualAttentionBlock(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, width: int, layers: int, heads: int, context_length: int):
+    def __init__(self, config_file, context_length: int):
         super().__init__()
-        self.width = width
-        self.layers = layers
-        self.resblocks = nn.Sequential(*[ResidualAttentionBlock(width, heads, self.build_attention_mask(context_length)) for _ in range(layers)])
+        
+        # Open and read the YAML file
+        with open(config_file, 'r') as file:
+            config = yaml.safe_load(file)
+            
+        self.width = config['width']
+        self.layers = config['layers']
+        self.heads = config['heads']
+        self.resblocks = nn.Sequential(*[ResidualAttentionBlock(self.width, self.heads, self.build_attention_mask(context_length)) for _ in range(self.layers)])
         
     def build_attention_mask(self, context_length):
         # lazily create causal attention mask, with full attention between the vision tokens
