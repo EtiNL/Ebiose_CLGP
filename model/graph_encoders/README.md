@@ -61,3 +61,32 @@ For implementing Graph Neural Networks (GNNs) on oriented graph data, several re
 4. **GraphSAGE++: Weighted Multi-scale GNN**: This work addresses challenges in GNNs by considering multi-scale neighborhood information, which can be beneficial for oriented graphs by capturing more complex dependencies between nodes. The approach helps mitigate issues like over-smoothing and can be useful for oriented graph data where directionality plays a significant role【12†source】.
 
 These resources offer a combination of theoretical insights and practical implementations that can help you adapt GNNs for oriented graph data. You can find more details and implementations in the provided links, which will guide you through setting up and experimenting with these advanced GNN models.
+
+When designing Graph Neural Networks (GNNs), the number of graph convolution layers and the dimensionality of hidden layers are critical hyperparameters that can significantly impact the performance and effectiveness of the model. Here are some key insights and findings from the literature:
+
+### Number of Graph Convolution Layers
+
+1. **Shallow vs. Deep GNNs**:
+   - Most state-of-the-art GNN models typically use a shallow architecture with 2 to 3 layers. This is because deeper GNNs often suffer from over-smoothing, where the node representations become indistinguishable as the number of layers increases.
+   - However, recent research has shown that deeper GNNs can be effective if designed carefully. For instance, models like Deep Graph Convolutional Neural Networks (DGCNNs) have successfully used up to 32 layers by incorporating techniques such as non-local message passing and residual connections to mitigate the over-smoothing problem (PLOS ONE, 2021).
+
+2. **Layer Depth and Performance**:
+   - The performance improvement from adding more layers often plateaus or even degrades beyond a certain point due to the over-smoothing effect. Techniques like residual connections, dense connections, and layer normalization can help in training deeper GNNs by ensuring better gradient flow and preserving detailed information across layers (Computational Social Networks, 2022).
+
+### Hidden Dimensions
+
+1. **Choosing Hidden Dimensions**:
+   - The hidden dimension (number of hidden units per layer) is crucial for capturing the complexity of node features. Common choices for hidden dimensions in many applications range from 16 to 128, depending on the dataset size and complexity.
+   - For instance, some studies use hidden dimensions of 64 for each module, balancing between computational efficiency and the ability to capture complex features (ScienceDirect, 2021).
+
+2. **Impact on Performance**:
+   - Higher hidden dimensions generally allow the model to learn more complex representations, but this comes with increased computational cost and the risk of overfitting, especially with smaller datasets. Therefore, selecting the hidden dimension requires careful cross-validation.
+   - In practical implementations, tuning the hidden dimensions along with other hyperparameters such as learning rate and dropout rates can significantly influence the model's performance (SpringerOpen, 2021).
+
+### Recommendations
+
+- **Start with a Baseline**: Begin with 2-3 graph convolution layers and hidden dimensions of 64. These settings provide a good balance between performance and computational cost for many tasks.
+- **Experiment with Deeper Architectures**: If the task requires capturing high-order relationships or you have a large dataset, experiment with deeper architectures using techniques like residual connections to prevent over-smoothing.
+- **Hyperparameter Tuning**: Use cross-validation to fine-tune the number of layers and hidden dimensions specific to your dataset and task.
+
+By understanding and carefully selecting these hyperparameters, you can enhance the performance of GNNs for various graph-related tasks. For further reading and detailed methodologies, you can refer to the papers mentioned above, such as those published in PLOS ONE and Computational Social Networks.
