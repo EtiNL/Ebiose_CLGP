@@ -1,5 +1,6 @@
 https://journalofbigdata.springeropen.com/articles/10.1186/s40537-023-00876-4
 
+# GNN architectures
 To implement graph encoders for producing embeddings, we can explore several architectures that have been developed and refined over recent years. Here are some notable papers and their contributions to this field:
 
 1. **Graph Convolutional Networks (GCNs)**:
@@ -27,6 +28,13 @@ To implement graph encoders for producing embeddings, we can explore several arc
    - **Summary**: The GIN model is proposed as a theoretically powerful architecture that is capable of distinguishing different graph structures. It is based on the Weisfeiler-Lehman graph isomorphism test.
    - **Link**: [arXiv:1810.00826](https://arxiv.org/abs/1810.00826)
 
+6. **Higher-Order Graph Neural Networks**:
+   - **Higher-Order GNNs**: These models address the limitations of standard message-passing GNNs by capturing more complex node interactions and dependencies. They are particularly effective in applications requiring nuanced relational understanding, such as biconnectivity in graphs【16†source】.
+
+7. **Attention-Based Graph Neural Networks**:
+   - **GATv2**: An updated version of the original Graph Attention Network, GATv2 introduces dynamic attention mechanisms that enhance the model's ability to learn from graph-structured data by adaptively focusing on the most relevant nodes and edges【16†source】.
+
+# Exemples of implementations
 For implementing graph encoders to produce embeddings, several recent papers highlight innovative architectures and techniques developed since 2019. Here are some notable examples:
 
 1. **Graph Neural Networks (GNNs) for Recommendation Systems**:
@@ -41,14 +49,7 @@ For implementing graph encoders to produce embeddings, several recent papers hig
 4. **Graph Neural Networks for Material Science**:
    - **Graph Networks for Materials Exploration (GNoME)**: This tool, introduced by DeepMind, utilizes GNNs to discover and predict the stability of new materials. By representing atoms and their bonds as graphs, GNoME can effectively predict molecular properties and has significantly expanded the number of known stable materials【15†source】.
 
-5. **Attention-Based Graph Neural Networks**:
-   - **GATv2**: An updated version of the original Graph Attention Network, GATv2 introduces dynamic attention mechanisms that enhance the model's ability to learn from graph-structured data by adaptively focusing on the most relevant nodes and edges【16†source】.
-
-6. **Higher-Order Graph Neural Networks**:
-   - **Higher-Order GNNs**: These models address the limitations of standard message-passing GNNs by capturing more complex node interactions and dependencies. They are particularly effective in applications requiring nuanced relational understanding, such as biconnectivity in graphs【16†source】.
-
-These papers represent the cutting edge of graph neural network research, providing various approaches to efficiently generate embeddings from graph-structured data for diverse applications. For detailed methodologies and further insights, refer to the respective papers and their comprehensive analyses.
-
+# GNN architectures for oriented graphs
 
 For implementing Graph Neural Networks (GNNs) on oriented graph data, several relevant papers and resources provide valuable insights and methodologies.
 
@@ -62,9 +63,10 @@ For implementing Graph Neural Networks (GNNs) on oriented graph data, several re
 
 These resources offer a combination of theoretical insights and practical implementations that can help you adapt GNNs for oriented graph data. You can find more details and implementations in the provided links, which will guide you through setting up and experimenting with these advanced GNN models.
 
+# Designing a GNN
 When designing Graph Neural Networks (GNNs), the number of graph convolution layers and the dimensionality of hidden layers are critical hyperparameters that can significantly impact the performance and effectiveness of the model. Here are some key insights and findings from the literature:
 
-### Number of Graph Convolution Layers
+## Number of Graph Convolution Layers
 
 1. **Shallow vs. Deep GNNs**:
    - Most state-of-the-art GNN models typically use a shallow architecture with 2 to 3 layers. This is because deeper GNNs often suffer from over-smoothing, where the node representations become indistinguishable as the number of layers increases.
@@ -73,7 +75,7 @@ When designing Graph Neural Networks (GNNs), the number of graph convolution lay
 2. **Layer Depth and Performance**:
    - The performance improvement from adding more layers often plateaus or even degrades beyond a certain point due to the over-smoothing effect. Techniques like residual connections, dense connections, and layer normalization can help in training deeper GNNs by ensuring better gradient flow and preserving detailed information across layers (Computational Social Networks, 2022).
 
-### Hidden Dimensions
+## Hidden Dimensions
 
 1. **Choosing Hidden Dimensions**:
    - The hidden dimension (number of hidden units per layer) is crucial for capturing the complexity of node features. Common choices for hidden dimensions in many applications range from 16 to 128, depending on the dataset size and complexity.
@@ -83,7 +85,7 @@ When designing Graph Neural Networks (GNNs), the number of graph convolution lay
    - Higher hidden dimensions generally allow the model to learn more complex representations, but this comes with increased computational cost and the risk of overfitting, especially with smaller datasets. Therefore, selecting the hidden dimension requires careful cross-validation.
    - In practical implementations, tuning the hidden dimensions along with other hyperparameters such as learning rate and dropout rates can significantly influence the model's performance (SpringerOpen, 2021).
 
-### Recommendations
+## Recommendations
 
 - **Start with a Baseline**: Begin with 2-3 graph convolution layers and hidden dimensions of 64. These settings provide a good balance between performance and computational cost for many tasks.
 - **Experiment with Deeper Architectures**: If the task requires capturing high-order relationships or you have a large dataset, experiment with deeper architectures using techniques like residual connections to prevent over-smoothing.
