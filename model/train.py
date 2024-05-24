@@ -7,7 +7,7 @@ from omegaconf import OmegaConf
 from dataloader.dataset import CLIP_COCO_dataset
 from dataloader.data_loaders import get_dataloader
 
-from model.model import CLIP
+from model.CLGP import CLGP
 from utils.simple_tokenizer import SimpleTokenizer
 from utils.custom_schedulers import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup
 from utils import set_seed, mkdir, setup_logger, load_config_file

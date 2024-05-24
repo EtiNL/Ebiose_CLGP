@@ -3,3 +3,5 @@ torch_geometric
 psycopg2
 pgvector
 neo4j
+tokenizers
+pytest

@@ -1,0 +1,277 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "[PAD]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 1,
+      "content": "[UNK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 2,
+      "content": "[CLS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 3,
+      "content": "[SEP]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 4,
+      "content": "[MASK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": {
+    "type": "NFKC"
+  },
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "SpecialToken": {
+          "id": "[CLS]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[SEP]",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "SpecialToken": {
+          "id": "[CLS]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[SEP]",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "[SEP]",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {
+      "[CLS]": {
+        "id": "[CLS]",
+        "ids": [
+          2
+        ],
+        "tokens": [
+          "[CLS]"
+        ]
+      },
+      "[SEP]": {
+        "id": "[SEP]",
+        "ids": [
+          3
+        ],
+        "tokens": [
+          "[SEP]"
+        ]
+      }
+    }
+  },
+  "decoder": null,
+  "model": {
+    "type": "Unigram",
+    "unk_id": null,
+    "vocab": [
+      [
+        "[PAD]",
+        0.0
+      ],
+      [
+        "[UNK]",
+        0.0
+      ],
+      [
+        "[CLS]",
+        0.0
+      ],
+      [
+        "[SEP]",
+        0.0
+      ],
+      [
+        "[MASK]",
+        0.0
+      ],
+      [
+        "o",
+        -2.4879910900479283
+      ],
+      [
+        "a",
+        -2.7705827372852534
+      ],
+      [
+        "ou",
+        -2.770583542731254
+      ],
+      [
+        "y",
+        -3.103916070580389
+      ],
+      [
+        "e",
+        -3.103916070620347
+      ],
+      [
+        ",",
+        -3.1039160706203486
+      ],
+      [
+        "thank",
+        -3.6039160705843907
+      ],
+      [
+        "in",
+        -3.6039160705904285
+      ],
+      [
+        "t",
+        -3.6039160706163456
+      ],
+      [
+        "H",
+        -3.6039160706203477
+      ],
+      [
+        "I",
+        -3.6039160706203486
+      ],
+      [
+        "s",
+        -3.6039160706203486
+      ],
+      [
+        "g",
+        -3.6039160706203486
+      ],
+      [
+        "m",
+        -3.6039160706203486
+      ],
+      [
+        "l",
+        -3.6039160706203486
+      ],
+      [
+        "?",
+        -3.6039160706203486
+      ],
+      [
+        "f",
+        -3.6039160706203486
+      ],
+      [
+        ".",
+        -3.6039160706203486
+      ],
+      [
+        "w",
+        -3.6039160706203486
+      ],
+      [
+        "r",
+        -3.6039160706203486
+      ],
+      [
+        "oo",
+        -4.062591267500453
+      ],
+      [
+        "u",
+        -4.603716070620348
+      ],
+      [
+        "i",
+        -4.603816070620349
+      ],
+      [
+        "h",
+        -4.603916070610139
+      ],
+      [
+        "k",
+        -4.603916070610139
+      ],
+      [
+        "d",
+        -4.603916070620349
+      ],
+      [
+        "n",
+        -4.603916070620349
+      ],
+      [
+        "b",
+        -4.603916070620349
+      ],
+      [
+        "'",
+        -4.603916070620349
+      ]
+    ],
+    "byte_fallback": false
+  }
+}
