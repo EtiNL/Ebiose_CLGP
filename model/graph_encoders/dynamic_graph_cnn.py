@@ -12,9 +12,18 @@ class DGCNN(nn.Module):
         self.fc = nn.Linear(out_channels, out_channels)
 
     def forward(self, x, batch):
+        """_summary_
+
+        Args:
+            x (torch.tensor): Node feature matrix
+            batch (torch.tensor): Batch vector which assigns each node to a specific graph in the batch.
+
+        Returns:
+            embbeding (torch.tensor)
+        """
         x = self.conv1(x, batch)
         x = self.conv2(x, batch)
         x = self.conv3(x, batch)
         x = global_max_pool(x, batch)
         x = self.fc(x)
-        return F.log_softmax(x, dim=1)
+        return F.relu(x)
