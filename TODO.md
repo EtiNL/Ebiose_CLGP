@@ -16,4 +16,4 @@
 
 # inference
 - make an interface for the ebiose graph generator and the models for it to initialize with a graph and score its graph generation with 
-$$ d(\varphy (Graph), T(Prompt) ) $$
+$`d(\varphy (Graph), T(Prompt) )`$
