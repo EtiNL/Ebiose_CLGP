@@ -40,7 +40,7 @@ class CLGP_Ebiose_dataset(Dataset):
         return result
 
     def __len__(self):
-        return len(self.img_ids)
+        return len()
 
     def __getitem__(self, idx):
         graph_input = None

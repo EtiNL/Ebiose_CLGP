@@ -168,8 +168,8 @@ def save_checkpoint(config, epoch, global_step, model, optimizer):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_img_dir", default=None, type=str, required=False, help="path of directory containing COCO training graphs")
-    parser.add_argument("--train_annotation_file", default=None, type=str, required=False, help="path of COCO annotation file")
+    parser.add_argument("--train_graph_dir", default=None, type=str, required=False, help="path of directory containing EBIOSE training graphs")
+    parser.add_argument("--train_promtp_dir", default=None, type=str, required=False, help="path of directory containing EBIOSE training prompts")
     args = parser.parse_args()
 
     data_config = load_config_file(DATA_CONFIG_PATH)
@@ -180,10 +180,10 @@ def main():
 
     # config = OmegaConf.merge(OmegaConf.create(vars(args)), config)  
     # merging cli arguments, if data path given in cli args use those
-    if args.train_img_dir : 
-        config.train_img_dir = args.train_img_dir
-    if args.train_annotation_file : 
-        config.train_annotation_file = args.train_annotation_file
+    if args.train_graph_dir : 
+        config.train_graph_dir = args.train_graph_dir
+    if args.train_prompt_dir : 
+        config.train_prompt_dir = args.train_prompt_dir
         
 
     global logger, wandbconfig
@@ -197,19 +197,17 @@ def main():
     mkdir(path=config.saved_checkpoints)
     mkdir(path=config.logs)
 
-    logger = setup_logger("CLIP_COCO_TRAIN", config.logs, 0, filename = "training_logs.txt")
+    logger = setup_logger("CLGP_EBIOSE_TRAIN", config.logs, 0, filename = "training_logs.txt")
 
     config.device = "cuda" if torch.cuda.is_available() else "cpu"
     config.n_gpu = torch.cuda.device_count() # config.n_gpu 
     set_seed(seed=11, n_gpu=config.n_gpu)
 
     # getting text tokenizer
-    tokenizer = get_trainned_tokenizer()
+    tokenizer = get_trainned_tokenizer('tokenizer_path')
     
     # creating RN50 CLIP model
-    model_params = dict(model_config.RN50)
-    model_params['vision_layers'] = tuple(model_params['vision_layers'])
-    model_params['vision_patch_size'] = None
+    model_params = dict(model_config)
     model = CLGP(**model_params)
 
     logger.info(f"Training/evaluation parameters {train_config}")
