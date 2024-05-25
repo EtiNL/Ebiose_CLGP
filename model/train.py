@@ -5,10 +5,11 @@ import os
 from omegaconf import OmegaConf
 
 from data_utils.dataloader import get_dataloader
-
+from data_utils.dataset import CLGP_Ebiose_dataset
 from model.CLGP import CLGP
 from data_utils.tokenizer import get_trainned_tokenizer
-from train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed, mkdir, setup_logger, load_config_file
+from train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed, setup_logger
+from ..utils import mkdir, load_config_file
 
 from torch.optim import Adam, AdamW # both are same but AdamW has a default weight decay
 
@@ -202,7 +203,7 @@ def main():
     logger.info(f"Training/evaluation parameters {train_config}")
 
     # getting dataset for training
-    train_dataset = CLIP_COCO_dataset(config, tokenizer)
+    train_dataset = CLGP_Ebiose_dataset(config, tokenizer)
 
     # Now training
     global_step, avg_loss = train(config, train_dataset, model)

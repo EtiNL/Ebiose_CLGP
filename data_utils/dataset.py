@@ -5,7 +5,7 @@ from omegaconf import OmegaConf
 import os.path as op
 import random
 
-from utils import load_from_yaml_file, read_json, load_config_file
+from ..utils import load_from_yaml_file, read_json, load_config_file
 
 
 import torch
@@ -44,16 +44,9 @@ class CLGP_Ebiose_dataset(Dataset):
         return len(self.img_ids)
 
     def __getitem__(self, idx):
-        img_id = self.img_ids[idx]
-
-        # randomly pick one caption from the image captions
-        text = random.choice(self.img_id_to_captions[img_id])
-
-        img_filename = self.img_id_to_filename[img_id]
-
-        img_path = op.join(self.img_dir, img_filename)
-        img = Image.open(img_path)
-        img_input = self.transform(img)
+        graph_input = None
+        
+        text = None
         text_input = self.tokenize(text)
 
-        return img_input, text_input
+        return graph_input, text_input
