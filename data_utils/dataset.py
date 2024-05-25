@@ -12,7 +12,6 @@ import torch
 import numpy as np
 
 def _transform(n_px):
-    #feature matrix normalization for graphs, 
     return None
 
 class CLGP_Ebiose_dataset(Dataset):

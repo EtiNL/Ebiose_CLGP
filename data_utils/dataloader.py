@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
 
 def get_dataloader(config, dataset, is_train = True):

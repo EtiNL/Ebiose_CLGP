@@ -63,15 +63,15 @@ def train(config, train_dataset, model):
 
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in enumerate(train_dataloader):
-            input_images, input_texts = batch
+            input_graphs, input_texts = batch
 
-            input_images = input_images.to(torch.device(config.device))
+            input_graphs = input_graphs.to(torch.device(config.device))
             input_texts = input_texts.to(torch.device(config.device))
             
-            image_features, text_features = model(input_images, input_texts)
+            graph_features, text_features = model(input_graphs, input_texts)
 
             # normalized features
-            image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+            graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
 
             if config.n_gpu == 1:
@@ -79,15 +79,15 @@ def train(config, train_dataset, model):
             elif config.n_gpu > 1:
                 logit_scale = model.module.logit_scale.exp()
 
-            logits_per_image = logit_scale * image_features @ text_features.t()
-            logits_per_text = logit_scale * text_features @ image_features.t()
+            logits_per_graph = logit_scale * graph_features @ text_features.t()
+            logits_per_text = logit_scale * text_features @ graph_features.t()
 
-            labels = torch.arange(len(logits_per_image)).to(logits_per_image.device)
+            labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
 
-            image_loss = F.cross_entropy(logits_per_image, labels)
+            graph_loss = F.cross_entropy(logits_per_graph, labels)
             text_loss  = F.cross_entropy(logits_per_text, labels)
 
-            loss = (image_loss + text_loss) / 2
+            loss = (graph_loss + text_loss) / 2
 
             if config.n_gpu > 1: 
                 loss = loss.mean() # mean() to average on multi-gpu parallel training
@@ -162,7 +162,7 @@ def save_checkpoint(config, epoch, global_step, model, optimizer):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_img_dir", default=None, type=str, required=False, help="path of directory containing COCO training images")
+    parser.add_argument("--train_img_dir", default=None, type=str, required=False, help="path of directory containing COCO training graphs")
     parser.add_argument("--train_annotation_file", default=None, type=str, required=False, help="path of COCO annotation file")
     args = parser.parse_args()
 
