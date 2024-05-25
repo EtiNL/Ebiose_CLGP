@@ -5,3 +5,4 @@ pgvector
 neo4j
 tokenizers
 pytest
+omegaconf

@@ -30,6 +30,10 @@ def train_unigram_tokenizer(corpus, vocab_size=3000):
     )
     
     return tokenizer
+
+def get_trainned_tokenizer(path):
+    return Tokenizer.from_file(path)
+    
 if __name__=='__main__':
     # Sample corpus
     corpus = [

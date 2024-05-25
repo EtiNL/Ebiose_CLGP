@@ -4,13 +4,11 @@ import numpy as np
 import os
 from omegaconf import OmegaConf
 
-from dataloader.dataset import CLIP_COCO_dataset
-from dataloader.data_loaders import get_dataloader
+from data_utils.dataloader import get_dataloader
 
 from model.CLGP import CLGP
-from utils.simple_tokenizer import SimpleTokenizer
-from utils.custom_schedulers import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup
-from utils import set_seed, mkdir, setup_logger, load_config_file
+from data_utils.tokenizer import get_trainned_tokenizer
+from train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed, mkdir, setup_logger, load_config_file
 
 from torch.optim import Adam, AdamW # both are same but AdamW has a default weight decay
 
@@ -193,13 +191,13 @@ def main():
     set_seed(seed=11, n_gpu=config.n_gpu)
 
     # getting text tokenizer
-    tokenizer = SimpleTokenizer()
+    tokenizer = get_trainned_tokenizer()
     
     # creating RN50 CLIP model
     model_params = dict(model_config.RN50)
     model_params['vision_layers'] = tuple(model_params['vision_layers'])
     model_params['vision_patch_size'] = None
-    model = CLIP(**model_params)
+    model = CLGP(**model_params)
 
     logger.info(f"Training/evaluation parameters {train_config}")
 
