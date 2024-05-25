@@ -6,3 +6,4 @@ neo4j
 tokenizers
 pytest
 omegaconf
+wandb
