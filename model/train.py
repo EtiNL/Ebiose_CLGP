@@ -14,6 +14,7 @@ from ..utils import mkdir, load_config_file
 from torch.optim import Adam, AdamW # both are same but AdamW has a default weight decay
 
 import argparse
+import wandb
 
 
 DATA_CONFIG_PATH = 'dataloader/data_config.yaml'
@@ -43,7 +44,7 @@ def train(config, train_dataset, model):
     
     model = model.to(torch.device(config.device))
     model.train()
-
+    
     logger.info("***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataset))
     logger.info("  Num Epochs = %d", config.num_train_epochs)
@@ -56,6 +57,10 @@ def train(config, train_dataset, model):
     logger.info("  Total optimization steps = %d", t_total)
     if scheduler:
         logger.info("  warmup steps = %d", num_warmup_steps)
+        
+    wandbconfig.learning_rate = config.optimizer.params.lr
+    wandbconfig.batch_size = config.train_batch_size
+    wandbconfig.epochs = config.num_train_epochs
 
 
     global_step, global_loss, global_acc =0,  0.0, 0.0
@@ -117,13 +122,14 @@ def train(config, train_dataset, model):
                     logger.info("Epoch: {}, global_step: {}, lr: {:.6f}, loss: {:.4f} ({:.4f})".format(epoch, global_step, 
                         optimizer.param_groups[0]["lr"], loss.item(), global_loss / global_step)
                     )
+                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]})
 
                 if (config.save_steps > 0 and global_step % config.save_steps == 0) or \
                         global_step == t_total:
                     # saving checkpoint
                     save_checkpoint(config, epoch, global_step, model, optimizer) 
                     
-
+    wandb.save('model.pth')
     return global_step, global_loss / global_step
 
 
@@ -180,7 +186,13 @@ def main():
         config.train_annotation_file = args.train_annotation_file
         
 
-    global logger
+    global logger, wandbconfig
+    # Initialize W&B
+    wandb.init(project='your-project-name', entity='your-wandb-username')
+
+    # Hyperparameters
+    wandbconfig = wandb.config
+    
     # creating directories for saving checkpoints and logs
     mkdir(path=config.saved_checkpoints)
     mkdir(path=config.logs)
