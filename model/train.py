@@ -206,7 +206,6 @@ def main():
     # getting text tokenizer
     tokenizer = get_trainned_tokenizer('tokenizer_path')
     
-    # creating RN50 CLIP model
     model_params = dict(model_config)
     model = CLGP(**model_params)
 
