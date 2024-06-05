@@ -7,3 +7,4 @@ tokenizers
 pytest
 omegaconf
 wandb
+plotly
