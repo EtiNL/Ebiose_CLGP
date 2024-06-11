@@ -32,7 +32,7 @@ def train(config, train_dataset, model):
     # total training iterations
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
     
-    optimizer = AdamW(model.parameters(), lr=config.optimizer.params.lr, eps=config.optimizer.params.eps, weight_decay=config.optimizer.params.weight_decay)
+    optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
 
     # Warmup iterations = 20% of total iterations
     num_warmup_steps = int(0.20 * t_total)
@@ -44,7 +44,7 @@ def train(config, train_dataset, model):
     model = model.to(torch.device(config.device))
     model.train()
     
-    wandbconfig.learning_rate = config.optimizer.params.lr
+    wandbconfig.learning_rate = config.optimizer.lr
     wandbconfig.batch_size = config.train_batch_size
     wandbconfig.epochs = config.num_train_epochs
 
@@ -110,7 +110,8 @@ def train(config, train_dataset, model):
                     # saving checkpoint
                     save_checkpoint(config, epoch, global_step, model, optimizer) 
                     
-    wandb.save('model.pth')
+    wandb.save(config.model_save_name)
+    
     return global_step, global_loss / global_step
 
 
@@ -145,47 +146,32 @@ def save_checkpoint(config, epoch, global_step, model, optimizer):
 
 def main():
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--train_graph_dir", default=None, type=str, required=False, help="path of directory containing EBIOSE training graphs")
-    parser.add_argument("--train_promtp_dir", default=None, type=str, required=False, help="path of directory containing EBIOSE training prompts")
-    args = parser.parse_args()
-
     data_config = load_config_file(DATA_CONFIG_PATH)
     train_config = load_config_file(TRAINER_CONFIG_PATH)
     model_config = load_config_file(MODEL_CONFIG_PATH)
 
     config = OmegaConf.merge(train_config, data_config)
 
-    # merging cli arguments, if data path given in cli args use those
-    if args.train_graph_dir: 
-        config.train_graph_dir = args.train_graph_dir
-    if args.train_prompt_dir: 
-        config.train_prompt_dir = args.train_prompt_dir
-
     global wandbconfig
 
     # Initialize W&B
-    wandb.init(project='your-project-name', entity='your-wandb-username')
+    wandb.init(project='EbioseCLGP')
 
     # Hyperparameters
     wandbconfig = wandb.config
     
-    # creating directories for saving checkpoints and logs
+    # creating directories for saving checkpoints
     mkdir(path=config.saved_checkpoints)
-    mkdir(path=config.logs)
 
     config.device = "cuda" if torch.cuda.is_available() else "cpu"
     config.n_gpu = torch.cuda.device_count() # config.n_gpu 
     set_seed(seed=11, n_gpu=config.n_gpu)
-
-    # getting text tokenizer
-    tokenizer = get_trainned_tokenizer('tokenizer_path')
     
     model_params = dict(model_config)
     model = CLGP(**model_params)
 
     # getting dataset for training
-    train_dataset = CLGP_Ebiose_dataset(config, tokenizer)
+    train_dataset = CLGP_Ebiose_dataset(config, config.graph_encoder.name)
 
     # Now training
     global_step, avg_loss = train(config, train_dataset, model)
