@@ -26,11 +26,12 @@ def main(graph_data_file, graph_tokenizer_name, gsm8k_validation_file, prompt_to
         edges = graph_struct.get("edges", [])
         
         for node in nodes:
-            node_features_corpus.append(['name:' + node.get('id', '') + '    purpose: ' + node.get('purpose', '') + '     type: ' + node.get('type','')+ '   model: ' + node.get('model','')+ '     shared_context_prompt: ' + shared_context_prompt])
+            node_feature = 'name:' + node.get('id', '') + '    purpose: ' + node.get('purpose', '') + '     type: ' + node.get('type','')+ '   model: ' + node.get('model','')+ '     shared_context_prompt: ' + shared_context_prompt
+            node_features_corpus.append(node_feature)
 
         for edge in edges:
             if edge.get('condition','') != '':
-                condition_node = ['name:' + edge['condition']+ '    purpose: ' + 'Allows acces to the next step if verified'+ '     type: ' + 'condition'+ '    model: ', '     shared_context_prompt: ']
+                condition_node = 'name:' + edge['condition']+ '    purpose: ' + 'Allows acces to the next step if verified'+ '     type: ' + 'condition'+ '    model: ', '     shared_context_prompt: '
                 node_features_corpus.append(condition_node)
                 
         for i in range(len(evaluations['evaluations'])):

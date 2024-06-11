@@ -2,30 +2,29 @@ from torch.utils.data import Dataset
 import torch
 import pickle as pkl
 import json
-import numpy as np
+from tokenizers import Tokenizer
 from torch_geometric.data import Data
     
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
 
-    def __init__(self, config, prompt_tokenizer, graph_feature_tokenizer, prompt_context_length=100, node_feature_context_length = 100, mode = "training"):
+    def __init__(self, config_data, graph_encoder_name):
         super(CLGP_Ebiose_dataset, self).__init__()
 
-        self.config = config
-        self.prompt_context_length = prompt_context_length
-        self.node_feature_context_length = node_feature_context_length
-        self.prompt_tokenizer = prompt_tokenizer
-        self.graph_feature_tokenizer = graph_feature_tokenizer
+        self.config = config_data
+        self.prompt_context_length = self.config.prompt_context_length
+        self.node_feature_context_length = self.config.node_feature_context_length
+        self.prompt_tokenizer = Tokenizer.from_file(self.config.prompt_tokenizer)
+        self.graph_feature_tokenizer = Tokenizer.from_file(self.config.graph_feature_tokenizer)
+        self.graph_encoder_name = graph_encoder_name
         
         with open(self.config.graph_data_file, 'r') as f:
             self.graph_data = []
             for line in f:
                 self.graph_data.append(json.loads(line))
 
-        # Load validation set
-        if mode == "training":
-            validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
-            self.prompts_data = validation_set["question"]
+        validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
+        self.prompts_data = validation_set["question"]
 
         self.pairs = self.create_pairs()
 
@@ -34,8 +33,8 @@ class CLGP_Ebiose_dataset(Dataset):
         for graph, evaluations in self.graph_data:
             for i in range(len(evaluations['evaluations'])):
                 if evaluations['evaluations'][i]:  # Only consider successful evaluations
-                    prompt = self.prompts_data[evaluations['idx'][i]]
-                    pairs.append((self.process_graph(graph['graph']), self.tokenize_prompt(prompt)))
+                    prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
+                    pairs.append((graph['graph'], prompt))
         return pairs
 
     def tokenize_prompt(self, text):
@@ -48,7 +47,7 @@ class CLGP_Ebiose_dataset(Dataset):
         return len(self.pairs)
 
     def __getitem__(self, idx):
-        graph, question, target = self.pairs[idx]
+        graph, question = self.pairs[idx]
         graph_input = self.process_graph(graph)
         text_input = self.tokenize_prompt(question)
         return graph_input, text_input
@@ -56,17 +55,15 @@ class CLGP_Ebiose_dataset(Dataset):
     def process_graph(self, graph):
         graph_data = self.parse_graph(graph)
         
-        encoder_name = self.config.graph_encoder
-        
-        if encoder_name == "graph_sage":
+        if self.graph_encoder_name == "graph_sage":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif encoder_name == "dgcnn":
+        elif self.graph_encoder_name == "dgcnn":
             graph_inputs = graph_data.x, graph_data.batch
-        elif encoder_name == "gin":
+        elif self.graph_encoder_name == "gin":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif encoder_name == "gat":
+        elif self.graph_encoder_name == "gat":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif encoder_name == "gcn":
+        elif self.graph_encoder_name == "gcn":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
 
         return graph_inputs
