@@ -1,0 +1,196 @@
+import torch
+import torch.nn.functional as F
+import numpy as np
+import os
+from omegaconf import OmegaConf
+
+from data_utils.dataloader import get_dataloader
+from data_utils.dataset import CLGP_Ebiose_dataset
+from model.CLGP import CLGP
+from data_utils.tokenizer import get_trainned_tokenizer
+from train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed
+from .utils import mkdir, load_config_file
+
+from torch.optim import AdamW # use AdamW for weight decay
+
+import argparse
+import wandb
+
+
+DATA_CONFIG_PATH = 'data_utils/data_config.yaml'
+TRAINER_CONFIG_PATH = 'trainer/train_config.yaml'
+MODEL_CONFIG_PATH = 'model/model_config.yaml'
+
+def train(config, train_dataset, model):
+    '''
+    Trains the model.
+    '''
+    
+    config.train_batch_size = config.per_gpu_train_batch_size * max(1, config.n_gpu)
+    train_dataloader = get_dataloader(config, train_dataset, is_train=True)
+
+    # total training iterations
+    t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
+    
+    optimizer = AdamW(model.parameters(), lr=config.optimizer.params.lr, eps=config.optimizer.params.eps, weight_decay=config.optimizer.params.weight_decay)
+
+    # Warmup iterations = 20% of total iterations
+    num_warmup_steps = int(0.20 * t_total)
+    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps= num_warmup_steps, num_training_steps= t_total)
+
+    if config.n_gpu > 1:
+        model = torch.nn.DataParallel(model)
+    
+    model = model.to(torch.device(config.device))
+    model.train()
+    
+    wandbconfig.learning_rate = config.optimizer.params.lr
+    wandbconfig.batch_size = config.train_batch_size
+    wandbconfig.epochs = config.num_train_epochs
+
+    global_step, global_loss, global_acc =0,  0.0, 0.0
+    model.zero_grad()
+
+    for epoch in range(int(config.num_train_epochs)):
+        for step, batch in enumerate(train_dataloader):
+            input_graphs, input_texts = batch
+
+            input_graphs = input_graphs.to(torch.device(config.device))
+            input_texts = input_texts.to(torch.device(config.device))
+            
+            graph_features, text_features = model(input_graphs, input_texts)
+
+            # normalized features
+            graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+            if config.n_gpu == 1:
+                logit_scale = model.logit_scale.exp()
+            elif config.n_gpu > 1:
+                logit_scale = model.module.logit_scale.exp()
+
+            logits_per_graph = logit_scale * graph_features @ text_features.t()
+            logits_per_text = logit_scale * text_features @ graph_features.t()
+
+            labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
+
+            graph_loss = F.cross_entropy(logits_per_graph, labels)
+            text_loss  = F.cross_entropy(logits_per_text, labels)
+
+            loss = (graph_loss + text_loss) / 2
+
+            if config.n_gpu > 1: 
+                loss = loss.mean() # mean() to average on multi-gpu parallel training
+            if config.gradient_accumulation_steps > 1:
+                loss = loss / config.gradient_accumulation_steps
+
+            loss.backward()
+
+            global_loss += loss.item()
+
+            if (step + 1) % config.gradient_accumulation_steps == 0:
+                global_step += 1
+                optimizer.step() # PYTORCH 1.x : call optimizer.step() first then scheduler.step()
+                
+                # logit scaling set as max 100 as mentioned in CLIP paper # log(100) = 4.6052
+                if config.n_gpu == 1:
+                    model.logit_scale.data = torch.clamp(model.logit_scale.data, 0, 4.6052)
+                elif config.n_gpu > 1:
+                    model.module.logit_scale.data = torch.clamp(model.module.logit_scale.data, 0, 4.6052)
+
+                if scheduler:
+                    scheduler.step() 
+                    
+                model.zero_grad()
+
+                if global_step % config.logging_steps == 0:
+                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]})
+
+                if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
+                    # saving checkpoint
+                    save_checkpoint(config, epoch, global_step, model, optimizer) 
+                    
+    wandb.save('model.pth')
+    return global_step, global_loss / global_step
+
+
+def save_checkpoint(config, epoch, global_step, model, optimizer):
+    '''
+    Checkpointing. Saves model and optimizer state_dict() and current epoch and global training steps.
+    '''
+    checkpoint_path = os.path.join(config.saved_checkpoints, f'checkpoint_{epoch}_{global_step}.pt')
+    save_num = 0
+    while (save_num < 10):
+        try:
+            if config.n_gpu > 1:
+                torch.save({
+                    'epoch' : epoch,
+                    'global_step' : global_step,
+                    'model_state_dict' : model.module.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                }, checkpoint_path)
+            else:
+                torch.save({
+                    'epoch' : epoch,
+                    'global_step' : global_step,
+                    'model_state_dict' : model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                }, checkpoint_path)
+            break
+        except:
+            save_num += 1
+    if save_num == 10:
+        print("Failed to save checkpoint after 10 trials.")
+    return
+
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train_graph_dir", default=None, type=str, required=False, help="path of directory containing EBIOSE training graphs")
+    parser.add_argument("--train_promtp_dir", default=None, type=str, required=False, help="path of directory containing EBIOSE training prompts")
+    args = parser.parse_args()
+
+    data_config = load_config_file(DATA_CONFIG_PATH)
+    train_config = load_config_file(TRAINER_CONFIG_PATH)
+    model_config = load_config_file(MODEL_CONFIG_PATH)
+
+    config = OmegaConf.merge(train_config, data_config)
+
+    # merging cli arguments, if data path given in cli args use those
+    if args.train_graph_dir: 
+        config.train_graph_dir = args.train_graph_dir
+    if args.train_prompt_dir: 
+        config.train_prompt_dir = args.train_prompt_dir
+
+    global wandbconfig
+
+    # Initialize W&B
+    wandb.init(project='your-project-name', entity='your-wandb-username')
+
+    # Hyperparameters
+    wandbconfig = wandb.config
+    
+    # creating directories for saving checkpoints and logs
+    mkdir(path=config.saved_checkpoints)
+    mkdir(path=config.logs)
+
+    config.device = "cuda" if torch.cuda.is_available() else "cpu"
+    config.n_gpu = torch.cuda.device_count() # config.n_gpu 
+    set_seed(seed=11, n_gpu=config.n_gpu)
+
+    # getting text tokenizer
+    tokenizer = get_trainned_tokenizer('tokenizer_path')
+    
+    model_params = dict(model_config)
+    model = CLGP(**model_params)
+
+    # getting dataset for training
+    train_dataset = CLGP_Ebiose_dataset(config, tokenizer)
+
+    # Now training
+    global_step, avg_loss = train(config, train_dataset, model)
+    
+    print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
+
+if __name__ == "__main__":
+    main()
