@@ -7,7 +7,6 @@ from omegaconf import OmegaConf
 from data_utils.dataloader import get_dataloader
 from data_utils.dataset import CLGP_Ebiose_dataset
 from model.CLGP import CLGP
-from data_utils.tokenizer import get_trainned_tokenizer
 from train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed
 from .utils import mkdir, load_config_file
 

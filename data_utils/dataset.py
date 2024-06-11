@@ -8,15 +8,14 @@ from torch_geometric.data import Data
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
 
-    def __init__(self, config_data, graph_encoder_name):
+    def __init__(self, config):
         super(CLGP_Ebiose_dataset, self).__init__()
 
-        self.config = config_data
+        self.config = config
         self.prompt_context_length = self.config.prompt_context_length
         self.node_feature_context_length = self.config.node_feature_context_length
         self.prompt_tokenizer = Tokenizer.from_file(self.config.prompt_tokenizer)
         self.graph_feature_tokenizer = Tokenizer.from_file(self.config.graph_feature_tokenizer)
-        self.graph_encoder_name = graph_encoder_name
         
         with open(self.config.graph_data_file, 'r') as f:
             self.graph_data = []
@@ -55,16 +54,18 @@ class CLGP_Ebiose_dataset(Dataset):
     def process_graph(self, graph):
         graph_data = self.parse_graph(graph)
         
-        if self.graph_encoder_name == "graph_sage":
+        if self.config.graph_encoder.name == "graph_sage":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif self.graph_encoder_name == "dgcnn":
+        elif self.config.graph_encoder.name == "dgcnn":
             graph_inputs = graph_data.x, graph_data.batch
-        elif self.graph_encoder_name == "gin":
+        elif self.config.graph_encoder.name == "gin":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif self.graph_encoder_name == "gat":
+        elif self.config.graph_encoder.name == "gat":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif self.graph_encoder_name == "gcn":
+        elif self.config.graph_encoder.name == "gcn":
             graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
+        else:
+            raise Exception(f"model_config.graph_encoder.name = {self.config.graph_encoder.name} is not a valid graph encoder name")
 
         return graph_inputs
     
