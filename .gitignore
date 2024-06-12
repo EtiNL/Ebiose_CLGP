@@ -3,3 +3,4 @@
 .pytest_cache
 data/*
 wandb/*
+path_to_checkpoints/*

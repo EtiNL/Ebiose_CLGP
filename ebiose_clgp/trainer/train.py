@@ -165,17 +165,17 @@ def main():
     set_seed(seed=11, n_gpu=config.n_gpu)
     
     model_params = dict(model_config)
-    model = CLGP(**model_params)
+    # model = CLGP(**model_params)
 
     # getting dataset for training
-    train_dataset = CLGP_Ebiose_dataset(config, config.graph_encoder.name)
+    train_dataset = CLGP_Ebiose_dataset(config)
     
     breakpoint()
 
     # Now training
-    global_step, avg_loss = train(config, train_dataset, model)
+    # global_step, avg_loss = train(config, train_dataset, model)
     
-    print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
+    # print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
 
 if __name__ == "__main__":
     main()
