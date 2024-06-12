@@ -1,6 +1,0 @@
-graph_data_file: 'data/data.jsonl'
-gsm8k_validation_file: 'data/gsm8k-validation.pkl'
-prompt_tokenizer: 'data_utils/prompt_tokenizer_1.json'
-graph_feature_tokenizer: 'data_utils/graph_tokenizer_1.json'
-prompt_context_length: 100
-node_feature_context_length: 100
