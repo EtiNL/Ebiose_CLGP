@@ -50,26 +50,8 @@ class CLGP_Ebiose_dataset(Dataset):
         graph_input = self.process_graph(graph)
         text_input = self.tokenize_prompt(question)
         return graph_input, text_input
-
-    def process_graph(self, graph):
-        graph_data = self.parse_graph(graph)
-        
-        if self.config.graph_encoder.name == "graph_sage":
-            graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif self.config.graph_encoder.name == "dgcnn":
-            graph_inputs = graph_data.x, graph_data.batch
-        elif self.config.graph_encoder.name == "gin":
-            graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif self.config.graph_encoder.name == "gat":
-            graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        elif self.config.graph_encoder.name == "gcn":
-            graph_inputs = graph_data.x, graph_data.edge_index, graph_data.batch
-        else:
-            raise Exception(f"model_config.graph_encoder.name = {self.config.graph_encoder.name} is not a valid graph encoder name")
-
-        return graph_inputs
     
-    def parse_graph(self, graph_struct):
+    def process_graph(self, graph_struct):
         # Extract node features
         shared_context_prompt = graph_struct.get('shared_context_prompt','')
         nodes = graph_struct.get("nodes", [])
@@ -110,4 +92,3 @@ class CLGP_Ebiose_dataset(Dataset):
         graph_data = Data(x=node_features, edge_index=edge_index)
         
         return graph_data
-

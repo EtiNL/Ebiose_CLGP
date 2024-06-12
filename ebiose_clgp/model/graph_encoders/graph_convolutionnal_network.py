@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv
-import torch_geometric
+from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.data import Data
 
 class GCN(nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
@@ -11,25 +11,37 @@ class GCN(nn.Module):
         self.conv2 = GCNConv(hidden_channels, out_channels)
         self.fc = nn.Linear(out_channels, out_channels)
 
-    def forward(self, x, edge_index, batch):
-        """_summary_
-
+    def forward(self, graph_data):
+        """
         Args:
-            x (torch.tensor): Node feature matrix of shape [num_nodes, num_node_features]
-            edge_index (torch.tensor): Graph connectivity in COO format (i.e., a list of edge indices) of shape [2, num_edges]
-            batch (torch.tensor): Batch vector which assigns each node to a specific graph in the batch of shape [num_nodes]
-                                  Example: If the first two nodes belong to the first graph, the next three to the second graph, and the last node to the third graph, 
-                                  batch might look like:
-
-                                  batch = torch.tensor([0, 0, 1, 1, 1, 2], dtype=torch.long)
+            graph_data (Data): Graph data object containing x (node features), edge_index (graph connectivity),
+                               and batch (batch vector).
 
         Returns:
             torch.tensor: embedding
         """
+        x, edge_index, batch = graph_data.x, graph_data.edge_index, graph_data.batch
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        x = torch_geometric.nn.global_mean_pool(x, batch)
+        x = global_mean_pool(x, batch)
         x = self.fc(x)
         return F.relu(x)
+
+# Example usage
+if __name__ == "__main__":
+    # Example graph data
+    node_features = torch.tensor([[1, 2], [2, 3], [3, 4], [4, 5]], dtype=torch.float)
+    edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]], dtype=torch.long)
+    batch = torch.tensor([0, 0, 1, 1], dtype=torch.long)
+
+    # Create a Data object
+    graph_data = Data(x=node_features, edge_index=edge_index, batch=batch)
+
+    # Initialize the GCN model
+    model = GCN(in_channels=2, hidden_channels=4, out_channels=2)
+
+    # Forward pass
+    embedding = model(graph_data)
+    print(embedding)

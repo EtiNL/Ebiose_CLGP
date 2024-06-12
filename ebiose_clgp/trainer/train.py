@@ -165,7 +165,7 @@ def main():
     set_seed(seed=11, n_gpu=config.n_gpu)
     
     model_params = dict(model_config)
-    # model = CLGP(**model_params)
+    model = CLGP(**model_params)
 
     # getting dataset for training
     train_dataset = CLGP_Ebiose_dataset(config)

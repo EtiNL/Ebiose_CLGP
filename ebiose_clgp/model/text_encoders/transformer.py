@@ -42,16 +42,12 @@ class ResidualAttentionBlock(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, config_file, context_length: int):
+    def __init__(self, context_length: int, width: int, layers: int, heads: int):
         super().__init__()
-        
-        # Open and read the YAML file
-        with open(config_file, 'r') as file:
-            config = yaml.safe_load(file)
             
-        self.width = config['width']
-        self.layers = config['layers']
-        self.heads = config['heads']
+        self.width = width
+        self.layers = layers
+        self.heads = heads
         self.context_length = context_length
         
         self.resblocks = nn.Sequential(*[ResidualAttentionBlock(self.width, self.heads, self.build_attention_mask(self.context_length)) for _ in range(self.layers)])
@@ -85,8 +81,8 @@ class Transformer(nn.Module):
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, self.width))
         nn.init.normal_(self.positional_embedding, std=0.01)
     
-    def encode_text(self, text):
-        x = self.token_embedding(text).type(self.dtype)  # [batch_size, n_ctx, d_model]
+    def encode_text(self, text_data):
+        x = text_data.type(self.dtype)  # [batch_size, n_ctx, d_model]
 
         x = x + self.positional_embedding.type(self.dtype)
         x = x.permute(1, 0, 2)  # NLD -> LND
@@ -96,7 +92,7 @@ class Transformer(nn.Module):
 
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+        x = x[torch.arange(x.shape[0]), text_data.argmax(dim=-1)] @ self.text_projection
 
         return x
 
