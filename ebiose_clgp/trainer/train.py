@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 import os
 from omegaconf import OmegaConf
+from torch.cuda.amp import autocast, GradScaler
 
 from ebiose_clgp.data_utils.dataloader import get_dataloader
 from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
@@ -43,66 +44,42 @@ def train(config, train_dataset, model):
     global_step, global_loss, global_acc = 0, 0.0, 0.0
     model.zero_grad()
 
+    scaler = GradScaler()
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in enumerate(train_dataloader):
-            input_graphs, input_texts = batch
+            with autocast():
+                input_graphs, input_texts = batch
 
-            input_graphs = input_graphs.to(torch.device(config.device))
-            input_texts = input_texts.to(torch.device(config.device))
+                input_graphs = input_graphs.to(torch.device(config.device))
+                input_texts = input_texts.to(torch.device(config.device))
 
-            graph_features, text_features = model(input_graphs, input_texts)
+                graph_features, text_features = model(input_graphs, input_texts)
 
-            # print("Shapes of input_graphs:", [g for g in input_graphs])
-            # print("Shapes of input_texts:", input_texts.shape)
-            # print("Shapes of graph_features:", graph_features.shape)
-            # print("Shapes of text_features:", text_features.shape)
+                graph_features = graph_features.to(torch.float16) / graph_features.norm(dim=-1, keepdim=True)
+                text_features = text_features.to(torch.float16) / text_features.norm(dim=-1, keepdim=True)
 
-            graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
-            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-
-            if config.n_gpu == 1:
                 logit_scale = model.logit_scale.exp()
-            elif config.n_gpu > 1:
-                logit_scale = model.module.logit_scale.exp()
+                logits_per_graph = logit_scale * graph_features @ text_features.t()
+                logits_per_text = logit_scale * text_features @ graph_features.t()
 
-            logits_per_graph = logit_scale * graph_features @ text_features.t()
-            logits_per_text = logit_scale * text_features @ graph_features.t()
+                labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
 
-            labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
+                graph_loss = F.cross_entropy(logits_per_graph, labels)
+                text_loss = F.cross_entropy(logits_per_text, labels)
+                loss = (graph_loss + text_loss) / 2
 
-            graph_loss = F.cross_entropy(logits_per_graph, labels)
-            text_loss = F.cross_entropy(logits_per_text, labels)
-
-            loss = (graph_loss + text_loss) / 2
-
-            if config.n_gpu > 1: 
-                loss = loss.mean() # mean() to average on multi-gpu parallel training
-            if config.gradient_accumulation_steps > 1:
-                loss = loss / config.gradient_accumulation_steps
-
-            loss.backward()
-
-            global_loss += loss.item()
+            scaler.scale(loss).backward()
 
             if (step + 1) % config.gradient_accumulation_steps == 0:
-                global_step += 1
-                optimizer.step()
-                
-                # logit scaling set as max 100 as mentioned in CLIP paper # log(100) = 4.6052
-                if config.n_gpu == 1:
-                    model.logit_scale.data = torch.clamp(model.logit_scale.data, 0, 4.6052)
-                elif config.n_gpu > 1:
-                    model.module.logit_scale.data = torch.clamp(model.module.logit_scale.data, 0, 4.6052)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
 
                 if scheduler:
                     scheduler.step()
 
-                model.zero_grad()
-
                 if global_step % config.logging_steps == 0:
                     wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]})
-
-                print("Loss:", loss.item())
 
                 if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                     save_checkpoint(config, epoch, global_step, model, optimizer)
