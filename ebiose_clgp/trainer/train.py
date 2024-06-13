@@ -13,9 +13,9 @@ from torch.optim import AdamW
 
 import wandb
 
-DATA_CONFIG_PATH = 'ebiose_clgp/data_utils/data_config.yaml'
-TRAINER_CONFIG_PATH = 'ebiose_clgp/trainer/train_config.yaml'
-MODEL_CONFIG_PATH = 'ebiose_clgp/model/model_config.yaml'
+DATA_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/data_utils/data_config.yaml'
+TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/train_config.yaml'
+MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/model_config.yaml'
 
 def train(config, train_dataset, model):
     config.train_batch_size = config.per_gpu_train_batch_size * max(1, config.n_gpu)
