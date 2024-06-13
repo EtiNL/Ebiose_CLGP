@@ -45,6 +45,7 @@ def train(config, train_dataset, model):
     model.zero_grad()
 
     scaler = GradScaler()
+    
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in enumerate(train_dataloader):
             with autocast():
@@ -55,10 +56,14 @@ def train(config, train_dataset, model):
 
                 graph_features, text_features = model(input_graphs, input_texts)
 
-                graph_features = graph_features.to(torch.float16) / graph_features.norm(dim=-1, keepdim=True)
-                text_features = text_features.to(torch.float16) / text_features.norm(dim=-1, keepdim=True)
+                graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
+                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
 
-                logit_scale = model.logit_scale.exp()
+                if config.n_gpu == 1:
+                    logit_scale = model.logit_scale.exp()
+                elif config.n_gpu > 1:
+                    logit_scale = model.module.logit_scale.exp()
+
                 logits_per_graph = logit_scale * graph_features @ text_features.t()
                 logits_per_text = logit_scale * text_features @ graph_features.t()
 
@@ -66,13 +71,26 @@ def train(config, train_dataset, model):
 
                 graph_loss = F.cross_entropy(logits_per_graph, labels)
                 text_loss = F.cross_entropy(logits_per_text, labels)
+
                 loss = (graph_loss + text_loss) / 2
+
+                if config.n_gpu > 1: 
+                    loss = loss.mean()
+                if config.gradient_accumulation_steps > 1:
+                    loss = loss / config.gradient_accumulation_steps
 
             scaler.scale(loss).backward()
 
             if (step + 1) % config.gradient_accumulation_steps == 0:
+                global_step += 1
                 scaler.step(optimizer)
                 scaler.update()
+                
+                if config.n_gpu == 1:
+                    model.logit_scale.data = torch.clamp(model.logit_scale.data, 0, 4.6052)
+                elif config.n_gpu > 1:
+                    model.module.logit_scale.data = torch.clamp(model.module.logit_scale.data, 0, 4.6052)
+
                 optimizer.zero_grad()
 
                 if scheduler:
@@ -80,6 +98,8 @@ def train(config, train_dataset, model):
 
                 if global_step % config.logging_steps == 0:
                     wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]})
+
+                print("Loss:", loss.item())
 
                 if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                     save_checkpoint(config, epoch, global_step, model, optimizer)
