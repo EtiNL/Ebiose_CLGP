@@ -42,9 +42,10 @@ class ResidualAttentionBlock(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, context_length: int, width: int, layers: int, heads: int):
+    def __init__(self, embed_dim: int, context_length: int, width: int, layers: int, heads: int):
         super().__init__()
-            
+        
+        self.embed_dim = embed_dim
         self.width = width
         self.layers = layers
         self.heads = heads
@@ -61,24 +62,26 @@ class Transformer(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
     
-    def initialize(self, embed_dim: int, vocab_size: int):
-        proj_std = (self.width ** -0.5) * ((2 * self.layers) ** -0.5)
-        attn_std = self.width ** -0.5
-        fc_std = (2 * self.width) ** -0.5
-        
+    def initialize(self):
+        # Initialize the weights of the residual attention blocks
         for block in self.resblocks:
-            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
-            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
-            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
-            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+            nn.init.xavier_uniform_(block.attn.in_proj_weight)
+            nn.init.zeros_(block.attn.in_proj_bias)
+            nn.init.xavier_uniform_(block.attn.out_proj.weight)
+            nn.init.zeros_(block.attn.out_proj.bias)
 
-        self.text_projection = nn.Parameter(torch.empty(self.width, embed_dim))
-        nn.init.normal_(self.text_projection, std=self.width ** -0.5)
-        
-        self.token_embedding = nn.Embedding(vocab_size, self.width)
+            nn.init.xavier_uniform_(block.mlp[0].weight)  # c_fc weight
+            nn.init.zeros_(block.mlp[0].bias)            # c_fc bias
+            nn.init.xavier_uniform_(block.mlp[2].weight)  # c_proj weight
+            nn.init.zeros_(block.mlp[2].bias)            # c_proj bias
+
+        # Initialize the text projection layer
+        nn.init.xavier_uniform_(self.text_projection)
+
+        # Initialize the token embedding
         nn.init.normal_(self.token_embedding.weight, std=0.02)
-        
-        self.positional_embedding = nn.Parameter(torch.empty(self.context_length, self.width))
+
+        # Initialize the positional embedding
         nn.init.normal_(self.positional_embedding, std=0.01)
     
     def forward(self, text_data):

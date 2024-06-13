@@ -1,5 +1,7 @@
 graph_encoder:
-  name:
-
+  name: 'GCN'
+  hidden_channels:
 text_encoder:
-  name:
+  name: 'Transformer'
+  layers: 8
+  heads: 4
