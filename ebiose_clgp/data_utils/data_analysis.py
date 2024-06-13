@@ -76,8 +76,8 @@ def display_statistics(statistics):
     #     print(f"  Graph ID: {graph_id}, Resolutions: {count}")
 
 def main():
-    data_filepath = 'data/data.jsonl'
-    validation_filepath = 'data/gsm8k-validation.pkl'
+    data_filepath = 'ebiose_clgp/data/data.jsonl'
+    validation_filepath = 'ebiose_clgp/data/gsm8k-validation.pkl'
 
     data = load_data(data_filepath)
     validation_set = load_validation_set(validation_filepath)

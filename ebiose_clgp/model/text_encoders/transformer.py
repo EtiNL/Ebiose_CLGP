@@ -18,17 +18,17 @@ class QuickGELU(nn.Module):
 
 
 class ResidualAttentionBlock(nn.Module):
-    def __init__(self, d_model: int, n_head: int, attn_mask: torch.Tensor = None):
+    def __init__(self, d_model: int, n_head: int, feedforward_dim: int, layer_norm_eps: float, attn_mask: torch.Tensor = None):
         super().__init__()
 
         self.attn = nn.MultiheadAttention(d_model, n_head)
-        self.ln_1 = LayerNorm(d_model)
+        self.ln_1 = LayerNorm(d_model, eps=layer_norm_eps)
         self.mlp = nn.Sequential(OrderedDict([
-            ("c_fc", nn.Linear(d_model, d_model * 4)),
+            ("c_fc", nn.Linear(d_model, feedforward_dim)),
             ("gelu", QuickGELU()),
-            ("c_proj", nn.Linear(d_model * 4, d_model))
+            ("c_proj", nn.Linear(feedforward_dim, d_model))
         ]))
-        self.ln_2 = LayerNorm(d_model)
+        self.ln_2 = LayerNorm(d_model, eps=layer_norm_eps)
         self.attn_mask = attn_mask
 
     def attention(self, x: torch.Tensor):
@@ -42,26 +42,37 @@ class ResidualAttentionBlock(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, embed_dim: int, context_length: int, width: int, layers: int, heads: int):
+    def __init__(self, config: dict):
         super().__init__()
-        
-        self.embed_dim = embed_dim
-        self.width = width
-        self.layers = layers
-        self.heads = heads
-        self.context_length = context_length
-        
-        self.resblocks = nn.Sequential(*[ResidualAttentionBlock(self.width, self.heads, self.build_attention_mask(self.context_length)) for _ in range(self.layers)])
-        self.ln_final = LayerNorm(self.width)
-        
-    def build_attention_mask(self):
-        # lazily create causal attention mask, with full attention between the vision tokens
-        # pytorch uses additive attention mask; fill with -inf
-        mask = torch.empty(self.context_length, self.context_length)
+
+        # Extract parameters from the configuration
+        text_encoder_config = config['text_encoder']
+        self.layers = text_encoder_config['layers']
+        self.heads = text_encoder_config['heads']
+        self.width = text_encoder_config['width']
+        self.feedforward_dim = text_encoder_config['feedforward_dim']
+        self.max_position_embeddings = text_encoder_config['max_position_embeddings']
+        self.layer_norm_eps = text_encoder_config['layer_norm_eps']
+        self.initializer_range = text_encoder_config['initializer_range']
+        self.embed_dim = config['embed_dim']
+
+        self.resblocks = nn.Sequential(*[ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps, self.build_attention_mask(self.max_position_embeddings)) for _ in range(self.layers)])
+        self.ln_final = LayerNorm(self.width, eps=self.layer_norm_eps)
+
+        self.token_embedding = nn.Embedding(self.max_position_embeddings, self.width)
+        self.positional_embedding = nn.Parameter(torch.empty(self.max_position_embeddings, self.width))
+        self.text_projection = nn.Parameter(torch.empty(self.width, self.embed_dim))
+
+        self.initialize()
+
+    def build_attention_mask(self, context_length):
+        # Lazily create causal attention mask, with full attention between the vision tokens
+        # PyTorch uses additive attention mask; fill with -inf
+        mask = torch.empty(context_length, context_length)
         mask.fill_(float("-inf"))
-        mask.triu_(1)  # zero out the lower diagonal
+        mask.triu_(1)  # Zero out the lower diagonal
         return mask
-    
+
     def initialize(self):
         # Initialize the weights of the residual attention blocks
         for block in self.resblocks:
@@ -79,14 +90,13 @@ class Transformer(nn.Module):
         nn.init.xavier_uniform_(self.text_projection)
 
         # Initialize the token embedding
-        nn.init.normal_(self.token_embedding.weight, std=0.02)
+        nn.init.normal_(self.token_embedding.weight, std=self.initializer_range)
 
         # Initialize the positional embedding
         nn.init.normal_(self.positional_embedding, std=0.01)
-    
-    def forward(self, text_data):
-        x = text_data.type(self.dtype)  # [batch_size, n_ctx, d_model]
 
+    def forward(self, text_data):
+        x = self.token_embedding(text_data).type(self.dtype)  # [batch_size, n_ctx, d_model]
         x = x + self.positional_embedding.type(self.dtype)
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
@@ -94,7 +104,8 @@ class Transformer(nn.Module):
         x = self.ln_final(x).type(self.dtype)
 
         # x.shape = [batch_size, n_ctx, transformer.width]
-        # take features from the eot embedding (eot_token is the highest number in each sequence)
+        # Take features from the eot embedding (eot_token is the highest number in each sequence)
         x = x[torch.arange(x.shape[0]), text_data.argmax(dim=-1)] @ self.text_projection
 
         return x
+

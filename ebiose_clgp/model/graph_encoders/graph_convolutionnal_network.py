@@ -5,8 +5,11 @@ from torch_geometric.nn import GCNConv, global_mean_pool
 from torch_geometric.data import Data
 
 class GCN(nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
+    def __init__(self, config):
         super(GCN, self).__init__()
+        
+        in_channels, hidden_channels, out_channels = config.node_feature_context_length, config.graph_encoder.hidden, config.embed_dim
+        
         self.conv1 = GCNConv(in_channels, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, out_channels)
         self.fc = nn.Linear(out_channels, out_channels)
@@ -14,10 +17,12 @@ class GCN(nn.Module):
     def initialize(self):
         # Initialize convolutional layers
         nn.init.xavier_uniform_(self.conv1.lin.weight)
-        nn.init.zeros_(self.conv1.lin.bias)
+        if self.conv1.lin.bias is not None:
+            nn.init.zeros_(self.conv1.lin.bias)
         
         nn.init.xavier_uniform_(self.conv2.lin.weight)
-        nn.init.zeros_(self.conv2.lin.bias)
+        if self.conv2.lin.bias is not None:
+            nn.init.zeros_(self.conv2.lin.bias)
 
         # Initialize the fully connected layer
         nn.init.xavier_uniform_(self.fc.weight)
@@ -40,4 +45,3 @@ class GCN(nn.Module):
         x = global_mean_pool(x, batch)
         x = self.fc(x)
         return F.relu(x)
-

@@ -146,7 +146,7 @@ def main():
     train_config = load_config_file(TRAINER_CONFIG_PATH)
     model_config = load_config_file(MODEL_CONFIG_PATH)
 
-    config = OmegaConf.merge(train_config, data_config)
+    config = OmegaConf.merge(train_config, data_config, model_config)
 
     global wandbconfig
 
@@ -160,8 +160,7 @@ def main():
     config.n_gpu = torch.cuda.device_count()
     set_seed(seed=11, n_gpu=config.n_gpu)
     
-    model_params = dict(model_config)
-    model = CLGP(**model_params)
+    model = CLGP(config)
 
     train_dataset = CLGP_Ebiose_dataset(config)
     
