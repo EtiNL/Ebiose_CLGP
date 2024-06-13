@@ -6,10 +6,10 @@ graph_encoder:
 
 text_encoder:
   name: 'Transformer'
-  layers: 12
-  heads: 8
+  layers: 4
+  heads: 2
   width: 512
-  feedforward_dim: 2048
+  feedforward_dim: 1028
   max_position_embeddings: 1000
   activation_function: 'gelu'
   layer_norm_eps: 1e-12
