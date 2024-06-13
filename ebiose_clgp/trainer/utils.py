@@ -8,7 +8,6 @@ import yaml
 from omegaconf import OmegaConf
 
 def mkdir(path):
-    # if it is the current folder, skip.
     if path == '':
         return
     try:
@@ -21,11 +20,9 @@ def load_config_file(file_path):
     with open(file_path, 'r') as fp:
         return OmegaConf.load(fp)
 
-
 def load_from_yaml_file(yaml_file):
     with open(yaml_file, 'r') as fp:
         return yaml.load(fp, Loader=yaml.FullLoader)
-
 
 def find_file_path_in_yaml(fname, root):
     if fname is not None:
@@ -37,7 +34,6 @@ def find_file_path_in_yaml(fname, root):
             raise FileNotFoundError(
                 errno.ENOENT, os.strerror(errno.ENOENT), op.join(root, fname)
             )
-
 
 def ensure_dir(dirname):
     dirname = Path(dirname)

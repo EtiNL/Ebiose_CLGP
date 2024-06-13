@@ -4,7 +4,7 @@ import pickle as pkl
 import json
 from tokenizers import Tokenizer
 from torch_geometric.data import Data
-    
+
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
 
@@ -61,7 +61,7 @@ class CLGP_Ebiose_dataset(Dataset):
         node_id_map = {}
         for i, node in enumerate(nodes):
             node_id_map[node["id"]] = i
-            node_features.append(['name:' + node.get('id', '') + '    purpose: ' + node.get('purpose', '') + '     type: ' + node.get('type','')+ '   model: ' + node.get('model','')+ '     shared_context_prompt: ' + shared_context_prompt])
+            node_features.append('name:' + node.get('id', '') + '    purpose: ' + node.get('purpose', '') + '     type: ' + node.get('type','')+ '   model: ' + node.get('model','')+ '     shared_context_prompt: ' + shared_context_prompt)
 
         # Create edge index
         edge_index = []
@@ -69,26 +69,22 @@ class CLGP_Ebiose_dataset(Dataset):
             start_node = node_id_map[edge["start_node_id"]]
             end_node = node_id_map[edge["end_node_id"]]
             if edge.get('condition','') != '':
-                condition_node = ['name:' + edge['condition']+ '    purpose: ' + 'Allows acces to the next step if verified'+ '     type: ' + 'condition'+ '    model: ', '     shared_context_prompt: ']
+                condition_node = 'name:' + edge['condition']+ '    purpose: ' + 'Allows acces to the next step if verified'+ '     type: ' + 'condition'+ '    model: ', '     shared_context_prompt: '
                 node_features.append(condition_node)
                 edge_index.append([start_node, len(node_features)-1])
                 edge_index.append([len(node_features)-1, end_node])
             else:
                 edge_index.append([start_node, end_node])
-
+                
         # Tokenize Node Feature
-        node_features = []
+        node_features_tensor = []
         for features in node_features:
             tokenized_features = torch.zeros((self.node_feature_context_length), dtype=torch.long)
             tokens = self.graph_feature_tokenizer.encode(features).ids
-            tokenized_features[:len(tokens)] = tokens 
-            node_features.append(tokenized_features)
-        node_features = torch.stack(node_features)
+            tokenized_features[:len(tokens)] = torch.tensor(tokens)
+            node_features_tensor.append(tokenized_features)
+        node_features_tensor = torch.stack(node_features_tensor)
         
-        # Convert node features to tensor
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
-
-        # Create a PyTorch Geometric data object
-        graph_data = Data(x=node_features, edge_index=edge_index)
         
-        return graph_data
+        return (node_features_tensor, edge_index)

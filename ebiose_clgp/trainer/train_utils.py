@@ -9,13 +9,8 @@ from logging import StreamHandler, Handler, getLevelName
 import os
 import sys
 import json
-# import pandas as pd
 from pathlib import Path
-from itertools import repeat
 from collections import OrderedDict
-import errno
-import os.path as op
-import yaml
 import random
 import numpy as np
 from omegaconf import OmegaConf
@@ -55,7 +50,6 @@ def get_cosine_schedule_with_warmup(
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
-
 def get_cosine_with_hard_restarts_schedule_with_warmup(
     optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int, num_cycles: int = 1, last_epoch: int = -1
 ):
@@ -91,11 +85,6 @@ def get_cosine_with_hard_restarts_schedule_with_warmup(
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
 
-
-# this class is a copy of logging.FileHandler except we end self.close()
-# at the end of each emit. While closing file and reopening file after each
-# write is not efficient, it allows us to see partial logs when writing to
-# fused Azure blobs, which is very convenient
 class FileHandler(StreamHandler):
     """
     A handler class which writes formatted logging records to disk files.
@@ -104,10 +93,8 @@ class FileHandler(StreamHandler):
         """
         Open the specified file and use it as the stream for logging.
         """
-        # Issue #27493: add support for Path objects to be passed in
+        
         filename = os.fspath(filename)
-        #keep the absolute path, otherwise derived classes which use this
-        #may come a cropper when the current directory changes
         self.baseFilename = os.path.abspath(filename)
         self.mode = mode
         self.encoding = encoding
@@ -136,25 +123,14 @@ class FileHandler(StreamHandler):
                         if hasattr(stream, "close"):
                             stream.close()
             finally:
-                # Issue #19523: call unconditionally to
-                # prevent a handler leak when delay is set
                 StreamHandler.close(self)
         finally:
             self.release()
 
     def _open(self):
-        """
-        Open the current base file with the (original) mode and encoding.
-        Return the resulting stream.
-        """
         return open(self.baseFilename, self.mode, encoding=self.encoding)
 
     def emit(self, record):
-        """
-        Emit a record.
-        If the stream was not opened because 'delay' was specified in the
-        constructor, open it before calling the superclass's emit.
-        """
         if self.stream is None:
             self.stream = self._open()
         StreamHandler.emit(self, record)
@@ -168,7 +144,6 @@ class FileHandler(StreamHandler):
 def setup_logger(name, save_dir, distributed_rank, filename="log.txt"):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    # don't log results for the non-master process
     if distributed_rank > 0:
         return logger
     ch = logging.StreamHandler(stream=sys.stdout)
@@ -192,5 +167,3 @@ def set_seed(seed, n_gpu):
     torch.manual_seed(seed)
     if n_gpu > 0:
         torch.cuda.manual_seed_all(seed)
-
-

@@ -1,12 +1,13 @@
 import torch
 from torch_geometric.data import Data
 
-def combine_graphs(graphs):
+def combine_graphs(graph_data_list):
     """
-    Combines multiple Data objects into a single Data object with a batch attribute.
+    Combines multiple graph data tuples into a single Data object with a batch attribute.
 
     Args:
-        graphs (list of Data): List of Data objects to combine.
+        graph_data_list (list of tuples): List of tuples, where each tuple contains
+                                          (node_features, edge_index) as torch.Tensor.
 
     Returns:
         Data: Combined Data object with node features, edge indices, and batch attribute.
@@ -19,14 +20,14 @@ def combine_graphs(graphs):
     # Offset for edge indices
     node_offset = 0
 
-    for i, graph in enumerate(graphs):
-        num_nodes = graph.x.size(0)
+    for i, (node_features, edge_index) in enumerate(graph_data_list):
+        num_nodes = node_features.size(0)
 
         # Append node features
-        all_node_features.append(graph.x)
+        all_node_features.append(node_features)
 
         # Adjust edge indices with the current offset and append
-        edge_index_adjusted = graph.edge_index + node_offset
+        edge_index_adjusted = edge_index + node_offset
         all_edge_indices.append(edge_index_adjusted)
 
         # Append batch information
