@@ -69,13 +69,13 @@ class CLGP_Ebiose_dataset(Dataset):
             start_node = node_id_map[edge["start_node_id"]]
             end_node = node_id_map[edge["end_node_id"]]
             if edge.get('condition','') != '':
-                condition_node = 'name:' + edge['condition']+ '    purpose: ' + 'Allows acces to the next step if verified'+ '     type: ' + 'condition'+ '    model: ', '     shared_context_prompt: '
+                condition_node = 'name:' + edge['condition']+ '    purpose: ' + 'Allows access to the next step if verified'+ '     type: ' + 'condition'+ '    model: '+ '     shared_context_prompt: '
                 node_features.append(condition_node)
                 edge_index.append([start_node, len(node_features)-1])
                 edge_index.append([len(node_features)-1, end_node])
             else:
                 edge_index.append([start_node, end_node])
-                
+        
         # Tokenize Node Feature
         node_features_tensor = []
         for features in node_features:
@@ -83,8 +83,8 @@ class CLGP_Ebiose_dataset(Dataset):
             tokens = self.graph_feature_tokenizer.encode(features).ids
             tokenized_features[:len(tokens)] = torch.tensor(tokens)
             node_features_tensor.append(tokenized_features)
-        node_features_tensor = torch.stack(node_features_tensor)
-        
+        node_features_tensor = torch.stack(node_features_tensor).float()  # Ensure node features are float
+
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
         
         return (node_features_tensor, edge_index)

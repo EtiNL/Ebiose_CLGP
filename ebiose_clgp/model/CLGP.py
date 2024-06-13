@@ -38,9 +38,7 @@ class CLGP(nn.Module):
         self.text_encoder.initialize()
 
     def forward(self, graphs, texts):
-        # print(graphs.type())
-        combined_graph = combine_graphs(graphs)
-        graph_features = self.graph_encoder(combined_graph)
+        graph_features = self.graph_encoder(graphs)
         text_features = self.text_encoder(texts)
 
         return graph_features, text_features
