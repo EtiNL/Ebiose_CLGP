@@ -2,7 +2,6 @@ import json
 import pickle as pkl
 from collections import defaultdict
 
-# Step 1: Load the data
 def load_data(filepath):
     with open(filepath, 'r') as f:
         data = [json.loads(line) for line in f]
@@ -13,7 +12,6 @@ def load_validation_set(filepath):
         validation_set = pkl.load(f)
     return validation_set
 
-# Step 2: Process the data
 def process_data(data, validation_set):
     question_success_counts = defaultdict(int)
     graph_success_counts = defaultdict(int)
@@ -34,7 +32,6 @@ def process_data(data, validation_set):
 
     return question_success_counts, graph_success_counts, question_graph_links
 
-# Step 3: Compute statistics
 def compute_statistics(question_success_counts, graph_success_counts, question_graph_links):
     total_questions = len(question_success_counts)
     total_graphs = len(graph_success_counts)
@@ -63,7 +60,6 @@ def compute_statistics(question_success_counts, graph_success_counts, question_g
 
     return statistics
 
-# Step 4: Display results
 def display_statistics(statistics):
     print(f"Total Questions: {statistics['total_questions']}")
     print(f"Total Graphs: {statistics['total_graphs']}")
@@ -75,11 +71,10 @@ def display_statistics(statistics):
     print(f"Success Count: {statistics['most_successful_graph']['success_count']}")
     print("\nGraph with Most Resolutions:")
     print(f"Question: {statistics['graph_with_most_resolutions']['question']}")
-    print("Graph Links:")
+    # print("Graph Links:")
     # for graph_id, count in statistics['graph_with_most_resolutions']['graph_links'].items():
     #     print(f"  Graph ID: {graph_id}, Resolutions: {count}")
 
-# Main function
 def main():
     data_filepath = 'data/data.jsonl'
     validation_filepath = 'data/gsm8k-validation.pkl'

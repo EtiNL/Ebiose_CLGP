@@ -23,12 +23,16 @@ class CLGP(nn.Module):
         self.config = config
 
         if self.config.graph_encoder.name == 'GCN':
-            self.graph_encoder = GCN(self.config.node_feature_context_length, self.config.graph_encoder.hidden, self.embed_dim)
+            try:
+                self.graph_encoder = GCN(self.config.node_feature_context_length, self.config.graph_encoder.hidden, self.embed_dim)
+            except: raise Exception("Problem while instantiating the graph_encoder model")
         else:
             raise Exception('invalid config.graph_encoder.name')
         
         if self.config.text_encoder.name == 'Transformer':
-            self.text_encoder = Transformer(self.config.prompt_context_length, self.config.text_encoder.width, self.config.text_encoder.layers, self.config.text_encoder.heads)
+            try:
+                self.text_encoder = Transformer(self.config.prompt_context_length, self.config.text_encoder.width, self.config.text_encoder.layers, self.config.text_encoder.heads)
+            except: raise Exception("Problem while instantiating the text_encoder model")
         else:
             raise Exception('invalid config.text_encoder.name')
         
@@ -45,12 +49,8 @@ class CLGP(nn.Module):
         self.text_encoder.initialize(self.embed_dim, self.vocab_size)
 
 
-    @property
-    def dtype(self):
-        return self.visual.conv1.weight.dtype
-
     def forward(self, graph, text):
-        graph_features = self.graph_encoder.encode_graph(graph)
-        text_features = self.text_encoder.encode_text(text)
+        graph_features = self.graph_encoder.forward(graph)
+        text_features = self.text_encoder.forward(text)
 
         return graph_features, text_features 

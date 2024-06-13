@@ -81,12 +81,12 @@ class Transformer(nn.Module):
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, self.width))
         nn.init.normal_(self.positional_embedding, std=0.01)
     
-    def encode_text(self, text_data):
+    def forward(self, text_data):
         x = text_data.type(self.dtype)  # [batch_size, n_ctx, d_model]
 
         x = x + self.positional_embedding.type(self.dtype)
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.forward(x)
+        x = self.resblocks(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
 
@@ -95,6 +95,3 @@ class Transformer(nn.Module):
         x = x[torch.arange(x.shape[0]), text_data.argmax(dim=-1)] @ self.text_projection
 
         return x
-
-    def forward(self, x: torch.Tensor):
-        return self.resblocks(x)

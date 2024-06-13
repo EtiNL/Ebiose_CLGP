@@ -87,7 +87,7 @@ def train(config, train_dataset, model):
 
             if (step + 1) % config.gradient_accumulation_steps == 0:
                 global_step += 1
-                optimizer.step() # PYTORCH 1.x : call optimizer.step() first then scheduler.step()
+                optimizer.step()
                 
                 # logit scaling set as max 100 as mentioned in CLIP paper # log(100) = 4.6052
                 if config.n_gpu == 1:
@@ -170,12 +170,9 @@ def main():
     # getting dataset for training
     train_dataset = CLGP_Ebiose_dataset(config)
     
-    breakpoint()
-
-    # Now training
-    # global_step, avg_loss = train(config, train_dataset, model)
+    global_step, avg_loss = train(config, train_dataset, model)
     
-    # print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
+    print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
 
 if __name__ == "__main__":
     main()

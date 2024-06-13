@@ -29,19 +29,3 @@ class GCN(nn.Module):
         x = self.fc(x)
         return F.relu(x)
 
-# Example usage
-if __name__ == "__main__":
-    # Example graph data
-    node_features = torch.tensor([[1, 2], [2, 3], [3, 4], [4, 5]], dtype=torch.float)
-    edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 0]], dtype=torch.long)
-    batch = torch.tensor([0, 0, 1, 1], dtype=torch.long)
-
-    # Create a Data object
-    graph_data = Data(x=node_features, edge_index=edge_index, batch=batch)
-
-    # Initialize the GCN model
-    model = GCN(in_channels=2, hidden_channels=4, out_channels=2)
-
-    # Forward pass
-    embedding = model(graph_data)
-    print(embedding)
