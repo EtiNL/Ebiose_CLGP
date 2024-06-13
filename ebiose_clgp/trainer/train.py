@@ -52,10 +52,10 @@ def train(config, train_dataset, model):
 
             graph_features, text_features = model(input_graphs, input_texts)
 
-            print("Shapes of input_graphs:", [g for g in input_graphs])
-            print("Shapes of input_texts:", input_texts.shape)
-            print("Shapes of graph_features:", graph_features.shape)
-            print("Shapes of text_features:", text_features.shape)
+            # print("Shapes of input_graphs:", [g for g in input_graphs])
+            # print("Shapes of input_texts:", input_texts.shape)
+            # print("Shapes of graph_features:", graph_features.shape)
+            # print("Shapes of text_features:", text_features.shape)
 
             graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
