@@ -5,6 +5,7 @@ num_train_epochs: 10
 train_batch_size: 32
 model_save_name: 'CLGP_V1.pth'
 saved_checkpoints: 'Model checkpoints'
+save_steps: 100
 
 optimizer:
   lr: 0.001
