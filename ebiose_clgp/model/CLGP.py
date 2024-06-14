@@ -46,8 +46,7 @@ class CLGP(nn.Module):
 
     def forward(self, graphs, texts):
         node_features = graphs.x
-        embedded_node_features = self.node_feature_encoder(node_features)
-        graphs.x = embedded_node_features
+        embedded_node_features = self.node_feature_encoder(node_features.long())
 
         graph_features = self.graph_encoder(graphs)
         text_features = self.text_encoder(texts)
