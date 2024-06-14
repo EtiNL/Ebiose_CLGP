@@ -110,6 +110,7 @@ class Transformer(nn.Module):
         # Ensure positional_embedding dimensions are compatible
         positional_embedding = self.positional_embedding[:x.size(1), :].unsqueeze(0)
         print("positional_embedding shape after unsqueeze:", positional_embedding.shape)  # Debugging line
+        positional_embedding = positional_embedding.to(x.device)
         x = x + positional_embedding
 
         x = x.permute(1, 0, 2)  # NLD -> LND
