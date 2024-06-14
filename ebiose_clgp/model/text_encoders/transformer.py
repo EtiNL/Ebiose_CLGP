@@ -77,14 +77,18 @@ class Transformer(nn.Module):
         # Initialize the weights of the residual attention blocks
         for block in self.resblocks:
             nn.init.xavier_uniform_(block.attn.in_proj_weight)
-            nn.init.zeros_(block.attn.in_proj_bias)
+            if block.attn.in_proj_bias is not None:
+                nn.init.zeros_(block.attn.in_proj_bias)
             nn.init.xavier_uniform_(block.attn.out_proj.weight)
-            nn.init.zeros_(block.attn.out_proj.bias)
+            if block.attn.out_proj.bias is not None:
+                nn.init.zeros_(block.attn.out_proj.bias)
 
             nn.init.xavier_uniform_(block.mlp[0].weight)  # c_fc weight
-            nn.init.zeros_(block.mlp[0].bias)            # c_fc bias
+            if block.mlp[0].bias is not None:
+                nn.init.zeros_(block.mlp[0].bias)            # c_fc bias
             nn.init.xavier_uniform_(block.mlp[2].weight)  # c_proj weight
-            nn.init.zeros_(block.mlp[2].bias)            # c_proj bias
+            if block.mlp[2].bias is not None:
+                nn.init.zeros_(block.mlp[2].bias)            # c_proj bias
 
         # Initialize the text projection layer
         nn.init.xavier_uniform_(self.text_projection)
@@ -96,8 +100,11 @@ class Transformer(nn.Module):
         nn.init.normal_(self.positional_embedding, std=0.01)
 
     def forward(self, text_data):
-        x = self.token_embedding(text_data) # [batch_size, n_ctx, d_model]
-        x = x + self.positional_embedding
+        x = self.token_embedding(text_data)  # [batch_size, n_ctx, d_model]
+        print("text_data shape:", text_data.shape)  # Debugging line
+        print("positional_embedding shape:", self.positional_embedding.shape)  # Debugging line
+        assert x.shape[1] <= self.positional_embedding.shape[0], "Positional embedding size is smaller than input length"
+        x = x + self.positional_embedding[:x.size(1), :]
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
@@ -108,4 +115,3 @@ class Transformer(nn.Module):
         x = x[torch.arange(x.shape[0]), text_data.argmax(dim=-1)] @ self.text_projection
 
         return x
-
