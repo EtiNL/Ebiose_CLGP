@@ -115,7 +115,12 @@ class Transformer(nn.Module):
 
         # Ensure that dimensions match before adding
         assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}"
-        x = x + positional_embedding
+        try:
+            x = x + positional_embedding
+        except RuntimeError as e:
+            print(f"Error during addition: {e}")
+            print(f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}")
+            raise
 
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
