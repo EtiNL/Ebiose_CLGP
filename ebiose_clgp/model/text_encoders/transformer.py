@@ -109,9 +109,9 @@ class Transformer(nn.Module):
         positional_embedding = positional_embedding.to(x.device)
         print("positional_embedding shape after to device:", positional_embedding.shape)  # Debugging line
 
-        # Repeat positional embedding
-        positional_embedding = positional_embedding.repeat(x.size(0), 1, 1)
-        print("positional_embedding shape after repeat:", positional_embedding.shape)  # Debugging line
+        # Use broadcasting instead of repeat
+        positional_embedding = positional_embedding.expand(x.size(0), -1, -1)
+        print("positional_embedding shape after expand:", positional_embedding.shape)  # Debugging line
 
         # Ensure that dimensions match before adding
         assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}"
