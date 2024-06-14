@@ -103,15 +103,15 @@ class Transformer(nn.Module):
         # Ensure positional_embedding dimensions are compatible
         positional_embedding = self.positional_embedding[:x.size(1), :].unsqueeze(0)
         print("positional_embedding shape after unsqueeze:", positional_embedding.shape)  # Debugging line
-        positional_embedding = positional_embedding.repeat(x.size(0), 1, 1)
-        print("positional_embedding shape after repeat:", positional_embedding.shape)  # Debugging line
 
-        # Check if both tensors are on the same device
+        # Check if positional_embedding is on the same device as x
         print(f"x device: {x.device}, positional_embedding device: {positional_embedding.device}")
-
-        # Move positional_embedding to the same device as x
         positional_embedding = positional_embedding.to(x.device)
         print("positional_embedding shape after to device:", positional_embedding.shape)  # Debugging line
+
+        # Repeat positional embedding
+        positional_embedding = positional_embedding.repeat(x.size(0), 1, 1)
+        print("positional_embedding shape after repeat:", positional_embedding.shape)  # Debugging line
 
         # Ensure that dimensions match before adding
         assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}"
