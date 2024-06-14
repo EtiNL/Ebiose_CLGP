@@ -105,16 +105,30 @@ class Transformer(nn.Module):
         print("positional_embedding shape after unsqueeze:", positional_embedding.shape)  # Debugging line
         positional_embedding = positional_embedding.repeat(x.size(0), 1, 1)
         print("positional_embedding shape after repeat:", positional_embedding.shape)  # Debugging line
+
+        # Check if both tensors are on the same device
+        print(f"x device: {x.device}, positional_embedding device: {positional_embedding.device}")
+
+        # Move positional_embedding to the same device as x
         positional_embedding = positional_embedding.to(x.device)
+        print("positional_embedding shape after to device:", positional_embedding.shape)  # Debugging line
+
+        # Ensure that dimensions match before adding
+        assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}"
         x = x + positional_embedding
 
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
-        
+
         # x.shape = [batch_size, context_length, transformer.width]
         # Take features from the eot embedding (eot_token is the highest number in each sequence)
-        x = x[torch.arange(x.shape[0]), text_data.argmax(dim=-1)] @ self.text_projection
+        eot_indices = text_data.argmax(dim=-1)
+        print("eot_indices:", eot_indices)  # Debugging line
+
+        # Ensure eot_indices are within bounds
+        assert torch.all(eot_indices < x.size(1)), f"eot_indices: {eot_indices}, context_length: {x.size(1)}"
+        x = x[torch.arange(x.shape[0]), eot_indices] @ self.text_projection
 
         return x
