@@ -146,6 +146,11 @@ class Transformer(nn.Module):
 
         # Ensure eot_indices are within bounds
         assert torch.all(eot_indices < x.size(1)), f"eot_indices: {eot_indices}, context_length: {x.size(1)}"
-        x = x[torch.arange(x.shape[0]), eot_indices] @ self.text_projection
+        try:
+            x = x[torch.arange(x.shape[0]), eot_indices] @ self.text_projection
+        except RuntimeError as e:
+            print(f"Error during indexing or projection: {e}")
+            print(f"eot_indices: {eot_indices}, x shape: {x.shape}, text_projection shape: {self.text_projection.shape}")
+            raise
 
         return x
