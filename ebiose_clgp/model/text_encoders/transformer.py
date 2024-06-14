@@ -113,18 +113,26 @@ class Transformer(nn.Module):
         positional_embedding = positional_embedding.expand(x.size(0), -1, -1)
         print("positional_embedding shape after expand:", positional_embedding.shape)  # Debugging line
 
-        # Check for NaNs or Infinities
-        assert torch.isfinite(x).all(), "x contains NaNs or Infinities"
-        assert torch.isfinite(positional_embedding).all(), "positional_embedding contains NaNs or Infinities"
+        # Check for NaNs or Infinities in x before addition
+        if not torch.isfinite(x).all():
+            nan_inf_indices = torch.nonzero(~torch.isfinite(x))
+            print(f"x contains NaNs or Infinities at indices: {nan_inf_indices}")
+            raise RuntimeError("x contains NaNs or Infinities before addition")
 
         # Ensure that dimensions match before adding
-        assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {x.shape}"
+        assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}"
         try:
             x = x + positional_embedding
         except RuntimeError as e:
             print(f"Error during addition: {e}")
             print(f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}")
             raise
+
+        # Check for NaNs or Infinities in x after addition
+        if not torch.isfinite(x).all():
+            nan_inf_indices = torch.nonzero(~torch.isfinite(x))
+            print(f"x contains NaNs or Infinities at indices: {nan_inf_indices}")
+            raise RuntimeError("x contains NaNs or Infinities after addition")
 
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
