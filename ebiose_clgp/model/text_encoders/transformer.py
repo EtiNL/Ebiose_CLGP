@@ -100,17 +100,22 @@ class Transformer(nn.Module):
         nn.init.normal_(self.positional_embedding, std=0.01)
 
     def forward(self, text_data):
-        x = self.token_embedding(text_data)  # [batch_size, n_ctx, d_model]
+        # Check dimensions of text_data
         print("text_data shape:", text_data.shape)  # Debugging line
-        print("positional_embedding shape:", self.positional_embedding.shape)  # Debugging line
-        assert x.shape[1] <= self.positional_embedding.shape[0], "Positional embedding size is smaller than input length"
+        assert text_data.size(1) <= self.max_position_embeddings, "text_data length exceeds max_position_embeddings"
+
+        x = self.token_embedding(text_data)  # [batch_size, context_length, width]
+        print("x shape after token_embedding:", x.shape)  # Debugging line
+
+        # Ensure positional_embedding dimensions are compatible
         x = x + self.positional_embedding[:x.size(1), :]
+
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
         
-        # x.shape = [batch_size, n_ctx, transformer.width]
+        # x.shape = [batch_size, context_length, transformer.width]
         # Take features from the eot embedding (eot_token is the highest number in each sequence)
         x = x[torch.arange(x.shape[0]), text_data.argmax(dim=-1)] @ self.text_projection
 
