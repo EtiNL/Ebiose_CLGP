@@ -108,7 +108,9 @@ class Transformer(nn.Module):
         print("x shape after token_embedding:", x.shape)  # Debugging line
 
         # Ensure positional_embedding dimensions are compatible
-        x = x + self.positional_embedding[:x.size(1), :]
+        positional_embedding = self.positional_embedding[:x.size(1), :].unsqueeze(0)
+        print("positional_embedding shape after unsqueeze:", positional_embedding.shape)  # Debugging line
+        x = x + positional_embedding
 
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.resblocks(x)
