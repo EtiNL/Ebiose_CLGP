@@ -1,26 +1,21 @@
 from collections import OrderedDict
 import torch
 from torch import nn
-import yaml
 
 class LayerNorm(nn.LayerNorm):
     """Subclass torch's LayerNorm to handle fp16."""
-
     def forward(self, x: torch.Tensor):
         orig_type = x.dtype
         ret = super().forward(x.type(torch.float32))
         return ret.type(orig_type)
 
-
 class QuickGELU(nn.Module):
     def forward(self, x: torch.Tensor):
         return x * torch.sigmoid(1.702 * x)
 
-
 class ResidualAttentionBlock(nn.Module):
     def __init__(self, d_model: int, n_head: int, feedforward_dim: int, layer_norm_eps: float, attn_mask: torch.Tensor = None):
         super().__init__()
-
         self.attn = nn.MultiheadAttention(d_model, n_head)
         self.ln_1 = LayerNorm(d_model, eps=layer_norm_eps)
         self.mlp = nn.Sequential(OrderedDict([
@@ -40,7 +35,6 @@ class ResidualAttentionBlock(nn.Module):
         x = x + self.mlp(self.ln_2(x))
         return x
 
-
 class Transformer(nn.Module):
     def __init__(self, config: dict):
         super().__init__()
@@ -56,7 +50,9 @@ class Transformer(nn.Module):
         self.initializer_range = text_encoder_config['initializer_range']
         self.embed_dim = config['embed_dim']
 
-        self.resblocks = nn.Sequential(*[ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps, self.build_attention_mask(self.max_position_embeddings)) for _ in range(self.layers)])
+        self.resblocks = nn.Sequential(*[
+            ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps, 
+                                   self.build_attention_mask(self.max_position_embeddings)) for _ in range(self.layers)])
         self.ln_final = LayerNorm(self.width, eps=self.layer_norm_eps)
 
         self.token_embedding = nn.Embedding(self.max_position_embeddings, self.width)
@@ -66,8 +62,6 @@ class Transformer(nn.Module):
         self.initialize()
 
     def build_attention_mask(self, context_length):
-        # Lazily create causal attention mask, with full attention between the vision tokens
-        # PyTorch uses additive attention mask; fill with -inf
         mask = torch.empty(context_length, context_length)
         mask.fill_(float("-inf"))
         mask.triu_(1)  # Zero out the lower diagonal
@@ -100,7 +94,6 @@ class Transformer(nn.Module):
         nn.init.normal_(self.positional_embedding, std=0.01)
 
     def forward(self, text_data):
-        # Check dimensions of text_data
         print("text_data shape:", text_data.shape)  # Debugging line
         assert text_data.size(1) <= self.max_position_embeddings, "text_data length exceeds max_position_embeddings"
 
@@ -110,8 +103,8 @@ class Transformer(nn.Module):
         # Ensure positional_embedding dimensions are compatible
         positional_embedding = self.positional_embedding[:x.size(1), :].unsqueeze(0)
         print("positional_embedding shape after unsqueeze:", positional_embedding.shape)  # Debugging line
-        positional_embedding = positional_embedding.expand(x.size(0), -1, -1)
-        print("positional_embedding shape after expand:", positional_embedding.shape)  # Debugging line
+        positional_embedding = positional_embedding.repeat(x.size(0), 1, 1)
+        print("positional_embedding shape after repeat:", positional_embedding.shape)  # Debugging line
         positional_embedding = positional_embedding.to(x.device)
         x = x + positional_embedding
 
