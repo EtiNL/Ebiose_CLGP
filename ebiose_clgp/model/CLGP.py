@@ -3,12 +3,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from ebiose_clgp.model.graph_encoders.graph_convolutionnal_network import GCN
-from ebiose_clgp.model.text_encoders.transformer import Transformer
-from ebiose_clgp.model.graph_encoders.graph_utils import combine_graphs
+from ebiose_clgp.model.text_encoders.transformer import Transformer as TextTransformer
+from ebiose_clgp.model.node_transformer import Transformer as NodeTransformer  # Import the new Transformer for node features
 
 class CLGP(nn.Module):
     def __init__(self, config: dict):
-        
         super().__init__()
         
         self.config = config
@@ -23,11 +22,19 @@ class CLGP(nn.Module):
         
         if self.config.text_encoder.name == 'Transformer':
             try:
-                self.text_encoder = Transformer(config)
+                self.text_encoder = TextTransformer(config)
             except Exception as e: 
                 raise Exception(f"Problem while instantiating the text_encoder model: {e}")
         else:
             raise Exception('Invalid config.text_encoder.name')
+
+        if self.config.node_feature_encoder.name == 'Transformer':
+            try:
+                self.node_feature_encoder = NodeTransformer(config)
+            except Exception as e:
+                raise Exception(f"Problem while instantiating the node_feature_encoder model: {e}")
+        else:
+            raise Exception('Invalid config.node_feature_encoder.name')
         
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
 
@@ -36,8 +43,13 @@ class CLGP(nn.Module):
     def initialize_parameters(self):
         self.graph_encoder.initialize()
         self.text_encoder.initialize()
+        self.node_feature_encoder.initialize()
 
     def forward(self, graphs, texts):
+        node_features = graphs.x
+        embedded_node_features = self.node_feature_encoder(node_features)
+        graphs.x = embedded_node_features
+
         graph_features = self.graph_encoder(graphs)
         text_features = self.text_encoder(texts)
 
