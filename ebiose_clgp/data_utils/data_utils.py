@@ -24,7 +24,11 @@ def collate_graph(batch):
         node_features, edge_index = graph
         graph_list.append(Data(x=node_features, edge_index=edge_index))
     
+    print('node_features.shape: ', node_features.shape)
+    
     combined_graph = Batch.from_data_list(graph_list)
+    
+    print('collate_graph func x shape: ', (combined_graph.x).shape)
     
     # Stack text inputs
     texts = torch.stack(texts)
