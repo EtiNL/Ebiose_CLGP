@@ -53,7 +53,7 @@ class CLGP_Ebiose_dataset(Dataset):
     
     def process_graph(self, graph_struct):
         # Extract node features
-        shared_context_prompt = graph_struct.get('shared_context_prompt','')
+        shared_context_prompt = graph_struct.get('shared_context_prompt', '')
         nodes = graph_struct.get("nodes", [])
         edges = graph_struct.get("edges", [])
 
@@ -61,22 +61,22 @@ class CLGP_Ebiose_dataset(Dataset):
         node_id_map = {}
         for i, node in enumerate(nodes):
             node_id_map[node["id"]] = i
-            node_features.append('name:' + node.get('id', '') + '    purpose: ' + node.get('purpose', '') + '     type: ' + node.get('type','')+ '   model: ' + node.get('model','')+ '     shared_context_prompt: ' + shared_context_prompt)
+            node_features.append('name:' + node.get('id', '') + '    purpose: ' + node.get('purpose', '') + '     type: ' + node.get('type', '') + '   model: ' + node.get('model', '') + '     shared_context_prompt: ' + shared_context_prompt)
 
         # Create edge index
         edge_index = []
         for edge in edges:
             start_node = node_id_map[edge["start_node_id"]]
             end_node = node_id_map[edge["end_node_id"]]
-            if edge.get('condition','') != '':
-                condition_node = 'name:' + edge['condition']+ '    purpose: ' + 'Allows access to the next step if verified'+ '     type: ' + 'condition'+ '    model: '+ '     shared_context_prompt: '
+            if edge.get('condition', '') != '':
+                condition_node = 'name:' + edge['condition'] + '    purpose: ' + 'Allows access to the next step if verified' + '     type: ' + 'condition' + '    model: ' + '     shared_context_prompt: '
                 node_features.append(condition_node)
-                edge_index.append([start_node, len(node_features)-1])
-                edge_index.append([len(node_features)-1, end_node])
+                edge_index.append([start_node, len(node_features) - 1])
+                edge_index.append([len(node_features) - 1, end_node])
             else:
                 edge_index.append([start_node, end_node])
-        
-        # Tokenize Node Feature
+
+        # Tokenize Node Features
         node_features_tensor = []
         for features in node_features:
             tokenized_features = torch.zeros((self.node_feature_context_length), dtype=torch.long)
@@ -86,5 +86,5 @@ class CLGP_Ebiose_dataset(Dataset):
         node_features_tensor = torch.stack(node_features_tensor).float()  # Ensure node features are float
 
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
-        
+
         return (node_features_tensor, edge_index)

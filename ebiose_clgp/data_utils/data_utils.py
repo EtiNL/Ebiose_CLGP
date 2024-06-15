@@ -17,13 +17,16 @@ def pad_graphs(graphs):
 
 def collate_graph(batch):
     graphs, texts = zip(*batch)
-    graphs = pad_graphs(graphs)
-    node_features_list, edge_index_list = zip(*graphs)
-
-    # Use torch_geometric's Batch to combine node features and edge indices into a batch
-    combined_graph = Batch.from_data_list([Data(x=node_features, edge_index=edge_index) for node_features, edge_index in graphs])
-
+    
+    # Combine node features and edge indices into a single batch
+    graph_list = []
+    for graph in graphs:
+        node_features, edge_index = graph
+        graph_list.append(Data(x=node_features, edge_index=edge_index))
+    
+    combined_graph = Batch.from_data_list(graph_list)
+    
     # Stack text inputs
     texts = torch.stack(texts)
-
+    
     return combined_graph, texts
