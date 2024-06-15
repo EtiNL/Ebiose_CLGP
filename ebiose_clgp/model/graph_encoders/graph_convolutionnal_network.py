@@ -37,7 +37,12 @@ class GCN(nn.Module):
         Returns:
             torch.tensor: embedding
         """
+        
         x, edge_index, batch = graph_data.x, graph_data.edge_index, graph_data.batch
+        
+        print(f"x shape input shape: {x.shape}")
+        
+        
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
