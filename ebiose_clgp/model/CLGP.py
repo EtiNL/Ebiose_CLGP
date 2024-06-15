@@ -51,6 +51,7 @@ class CLGP(nn.Module):
 
         graph_features = self.graph_encoder(graphs)
         print('graph forward ok')
+        print('text.shape: ', texts.shape)
         text_features = self.text_encoder(texts)
 
         return graph_features, text_features
