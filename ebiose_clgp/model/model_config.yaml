@@ -5,7 +5,7 @@ graph_encoder:
   hidden: 4
 
 node_feature_encoder:
-  name: Transformer
+  name: 'Transformer'
   layers: 2
   heads: 2
   width: 512
