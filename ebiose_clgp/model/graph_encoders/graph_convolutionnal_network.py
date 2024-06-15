@@ -42,6 +42,14 @@ class GCN(nn.Module):
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
+        
+        # Add print statements to debug shapes
+        print(f"x shape before pooling: {x.shape}")
+        print(f"batch shape: {batch.shape}")
+        
         x = global_mean_pool(x, batch)
+        
+        print(f"x shape after pooling: {x.shape}")
+        
         x = self.fc(x)
         return F.relu(x)
