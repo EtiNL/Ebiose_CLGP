@@ -93,64 +93,22 @@ class Transformer(nn.Module):
         # Initialize the positional embedding
         nn.init.normal_(self.positional_embedding, std=0.01)
 
-    def forward(self, text_data):
-        print("text_data shape:", text_data.shape)  # Debugging line
-        assert text_data.size(1) <= self.max_position_embeddings, "text_data length exceeds max_position_embeddings"
+    def forward(self, input_ids: torch.Tensor):
+        # Embed tokens and positions
+        token_embeddings = self.token_embedding(input_ids)
+        position_ids = torch.arange(input_ids.shape[1], dtype=torch.long, device=input_ids.device)
+        position_embeddings = self.positional_embedding[position_ids]
 
-        x = self.token_embedding(text_data)  # [batch_size, context_length, width]
-        print("x shape after token_embedding:", x.shape)  # Debugging line
+        # Combine token and position embeddings
+        x = token_embeddings + position_embeddings
 
-        # Ensure positional_embedding dimensions are compatible
-        positional_embedding = self.positional_embedding[:x.size(1), :].unsqueeze(0)
-        print("positional_embedding shape after unsqueeze:", positional_embedding.shape)  # Debugging line
-
-        # Check if positional_embedding is on the same device as x
-        print(f"x device: {x.device}, positional_embedding device: {positional_embedding.device}")
-        positional_embedding = positional_embedding.to(x.device)
-        print("positional_embedding shape after to device:", positional_embedding.shape)  # Debugging line
-
-        # Use broadcasting instead of repeat
-        positional_embedding = positional_embedding.expand(x.size(0), -1, -1)
-        print("positional_embedding shape after expand:", positional_embedding.shape)  # Debugging line
-
-        # Check for NaNs or Infinities in x before addition
-        if not torch.isfinite(x).all():
-            nan_inf_indices = torch.nonzero(~torch.isfinite(x))
-            print(f"x contains NaNs or Infinities at indices: {nan_inf_indices}")
-            raise RuntimeError("x contains NaNs or Infinities before addition")
-
-        # Ensure that dimensions match before adding
-        assert x.shape == positional_embedding.shape, f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}"
-        try:
-            x = x + positional_embedding
-        except RuntimeError as e:
-            print(f"Error during addition: {e}")
-            print(f"x shape: {x.shape}, positional_embedding shape: {positional_embedding.shape}")
-            raise
-
-        # Check for NaNs or Infinities in x after addition
-        if not torch.isfinite(x).all():
-            nan_inf_indices = torch.nonzero(~torch.isfinite(x))
-            print(f"x contains NaNs or Infinities at indices: {nan_inf_indices}")
-            raise RuntimeError("x contains NaNs or Infinities after addition")
-
-        x = x.permute(1, 0, 2)  # NLD -> LND
+        # Pass through residual attention blocks
         x = self.resblocks(x)
-        x = x.permute(1, 0, 2)  # LND -> NLD
+
+        # Apply final layer normalization
         x = self.ln_final(x)
 
-        # x.shape = [batch_size, context_length, transformer.width]
-        # Take features from the eot embedding (eot_token is the highest number in each sequence)
-        eot_indices = text_data.argmax(dim=-1)
-        print("eot_indices:", eot_indices)  # Debugging line
-
-        # Ensure eot_indices are within bounds
-        assert torch.all(eot_indices < x.size(1)), f"eot_indices: {eot_indices}, context_length: {x.size(1)}"
-        try:
-            x = x[torch.arange(x.shape[0]), eot_indices] @ self.text_projection
-        except RuntimeError as e:
-            print(f"Error during indexing or projection: {e}")
-            print(f"eot_indices: {eot_indices}, x shape: {x.shape}, text_projection shape: {self.text_projection.shape}")
-            raise
+        # Project to the embedding dimension
+        x = torch.matmul(x, self.text_projection)
 
         return x
