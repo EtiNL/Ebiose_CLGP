@@ -8,7 +8,7 @@ class GCN(nn.Module):
     def __init__(self, config):
         super(GCN, self).__init__()
         
-        in_channels, hidden_channels, out_channels = config.node_feature_context_length, config.graph_encoder.hidden, config.embed_dim
+        in_channels, hidden_channels, out_channels = config.embed_dim, config.graph_encoder.hidden, config.embed_dim
         
         self.conv1 = GCNConv(in_channels, hidden_channels)
         self.conv2 = GCNConv(hidden_channels, out_channels)
