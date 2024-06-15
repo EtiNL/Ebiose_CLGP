@@ -1,4 +1,4 @@
-embed_dim: 512
+embed_dim: 256
 
 graph_encoder:
   name: 'GCN'
@@ -6,20 +6,20 @@ graph_encoder:
 
 node_feature_encoder:
   name: Transformer
-  layers: 4
+  layers: 2
   heads: 2
   width: 512
-  feedforward_dim: 1028
+  feedforward_dim: 512
   activation_function: 'gelu'
   layer_norm_eps: 1e-12
   initializer_range: 0.02
 
 text_encoder:
   name: 'Transformer'
-  layers: 4
+  layers: 2
   heads: 2
   width: 512
-  feedforward_dim: 1028
+  feedforward_dim: 512
   activation_function: 'gelu'
   layer_norm_eps: 1e-12
   initializer_range: 0.02
