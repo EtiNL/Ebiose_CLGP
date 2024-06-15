@@ -55,6 +55,10 @@ def train(config, train_dataset, model):
 
                 input_graphs = input_graphs.to(torch.device(config.device))
                 input_texts = input_texts.to(torch.device(config.device))
+                
+                # Debugging information
+                print(f"Batch {step}: Input graphs shape: {input_graphs.x.shape}, Edge index shape: {input_graphs.edge_index.shape}")
+                print(f"Batch {step}: Input texts shape: {input_texts.shape}")
 
                 graph_features, text_features = model(input_graphs, input_texts)
 

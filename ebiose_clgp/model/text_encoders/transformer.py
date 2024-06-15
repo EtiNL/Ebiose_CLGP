@@ -106,12 +106,12 @@ class Transformer(nn.Module):
     def forward(self, input_ids: torch.Tensor):
         # Ensure input_ids are within the valid range
         assert input_ids.max().item() < self.max_position_embeddings, f"Max index {input_ids.max().item()} is out of range."
-
+        
         # Embed tokens and positions
         token_embeddings = self.token_embedding(input_ids)
         position_ids = torch.arange(input_ids.shape[1], dtype=torch.long, device=input_ids.device)
         position_embeddings = self.positional_embedding[position_ids]
-
+        
         # Combine token and position embeddings
         x = token_embeddings + position_embeddings
 
@@ -126,6 +126,5 @@ class Transformer(nn.Module):
         
         # Typically, the first token ([CLS]) is used as the aggregate representation
         prompt_embedding = x[:, 0, :]  # shape: (batch_size, embedding_dim)
-
 
         return prompt_embedding
