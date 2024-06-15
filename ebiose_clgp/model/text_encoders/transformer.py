@@ -36,9 +36,12 @@ class ResidualAttentionBlock(nn.Module):
         if self.attn_mask is not None:
             attn_mask = self.attn_mask[:x.size(0), :x.size(0)]
             attn_mask = attn_mask.to(dtype=x.dtype, device=x.device)
+            assert attn_mask.shape[0] == x.shape[0] and attn_mask.shape[1] == x.shape[1], f"Attention mask shape mismatch: {attn_mask.shape} vs {x.shape}"
         else:
             attn_mask = None
         return self.attn(x, x, x, need_weights=False, attn_mask=attn_mask)[0]
+
+
 
     def forward(self, x: torch.Tensor):
         x = x + self.attention(self.ln_1(x))
@@ -105,6 +108,7 @@ class Transformer(nn.Module):
 
     def forward(self, input_ids: torch.Tensor):
         # Ensure input_ids are within the valid range
+        print(f"Max position embedding for text encoder: {self.max_position_embeddings}")
         assert input_ids.max().item() < self.max_position_embeddings, f"Max index {input_ids.max().item()} is out of range."
         
         # Embed tokens and positions

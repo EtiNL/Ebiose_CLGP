@@ -39,8 +39,9 @@ class CLGP_Ebiose_dataset(Dataset):
     def tokenize_prompt(self, text):
         tokens = self.prompt_tokenizer.encode(text).ids
         result = torch.zeros(self.prompt_context_length, dtype=torch.long)
-        result[:len(tokens)] = torch.tensor(tokens)
+        result[:len(tokens)] = torch.tensor(tokens[:self.prompt_context_length])  # Truncate if necessary
         return result
+
 
     def __len__(self):
         return len(self.pairs)
