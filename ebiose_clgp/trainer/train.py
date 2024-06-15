@@ -49,6 +49,7 @@ def train(config, train_dataset, model):
     
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in enumerate(train_dataloader):
+            torch.cuda.empty_cache()  # Clear the cache
             with autocast():
                 input_graphs, input_texts = batch
 
@@ -102,8 +103,11 @@ def train(config, train_dataset, model):
 
                 print("Loss:", loss.item())
 
-                if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
-                    save_checkpoint(config, epoch, global_step, model, optimizer)
+            # Add memory diagnostics
+            print(torch.cuda.memory_summary(device=None, abbreviated=False))
+
+            if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
+                save_checkpoint(config, epoch, global_step, model, optimizer)
                     
     wandb.save(config.model_save_name)
     
