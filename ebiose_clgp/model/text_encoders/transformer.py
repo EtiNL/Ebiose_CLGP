@@ -24,22 +24,18 @@ class ResidualAttentionBlock(nn.Module):
             ("c_proj", nn.Linear(feedforward_dim, d_model))
         ]))
         self.ln_2 = LayerNorm(d_model, eps=layer_norm_eps)
-        self.attn_mask = self.build_attention_mask(max_position_embeddings)
+        self.max_position_embeddings = max_position_embeddings
 
-    def build_attention_mask(self, context_length):
-        mask = torch.empty(context_length, context_length)
+    def build_attention_mask(self, seq_length):
+        mask = torch.empty(seq_length, seq_length)
         mask.fill_(float("-inf"))
         mask.triu_(1)  # Zero out the lower diagonal
         return mask
 
     def attention(self, x: torch.Tensor):
-        if self.attn_mask is not None:
-            seq_length = x.size(1)
-            attn_mask = self.attn_mask[:seq_length, :seq_length]  # Adjust mask to match the sequence length
-            attn_mask = attn_mask.to(dtype=x.dtype, device=x.device)
-            assert attn_mask.shape[0] == seq_length and attn_mask.shape[1] == seq_length, f"Attention mask shape mismatch: {attn_mask.shape} vs {x.shape}"
-        else:
-            attn_mask = None
+        seq_length = x.size(0)
+        attn_mask = self.build_attention_mask(seq_length)  # Adjust mask to match the sequence length
+        attn_mask = attn_mask.to(dtype=x.dtype, device=x.device)
         return self.attn(x, x, x, need_weights=False, attn_mask=attn_mask)[0]
 
     def forward(self, x: torch.Tensor):
@@ -47,7 +43,6 @@ class ResidualAttentionBlock(nn.Module):
         x = x + attn_output
         x = x + self.mlp(self.ln_2(x))
         return x
-
 
 class Transformer(nn.Module):
     def __init__(self, config: dict, type: str):
@@ -108,16 +103,18 @@ class Transformer(nn.Module):
         nn.init.normal_(self.positional_embedding, std=0.01)
 
     def forward(self, input_ids: torch.Tensor):
-        # Assurez-vous que les indices des entrées sont dans les limites valides
+        # Ensure input_ids are within the valid range
         assert input_ids.max().item() < self.max_position_embeddings, f"Max index {input_ids.max().item()} is out of range."
-
+        
         # Embed tokens and positions
         token_embeddings = self.token_embedding(input_ids)
         position_ids = torch.arange(input_ids.shape[1], dtype=torch.long, device=input_ids.device)
         position_embeddings = self.positional_embedding[position_ids]
-
+        
         # Combine token and position embeddings
         x = token_embeddings + position_embeddings
+
+        # Check sequence length
         assert x.shape[1] <= self.max_position_embeddings, f"Input sequence length {x.shape[1]} exceeds max position embeddings {self.max_position_embeddings}"
 
         # Pass through residual attention blocks
@@ -128,8 +125,9 @@ class Transformer(nn.Module):
 
         # Project to the embedding dimension
         x = torch.matmul(x, self.text_projection)
-
+        
         # Typically, the first token ([CLS]) is used as the aggregate representation
         prompt_embedding = x[:, 0, :]  # shape: (batch_size, embedding_dim)
 
         return prompt_embedding
+
