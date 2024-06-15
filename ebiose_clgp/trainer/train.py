@@ -9,6 +9,7 @@ from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
 from ebiose_clgp.model.CLGP import CLGP
 from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
+from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 
 from torch.optim import AdamW
 
@@ -155,6 +156,8 @@ def main():
 
     config.device = "cuda" if torch.cuda.is_available() else "cpu"
     config.n_gpu = torch.cuda.device_count()
+    config.graph_node_tokenizer_max_pos = get_max_position_embedding(config.graph_feature_tokenizer)
+    config.prompt_tokenizer_max_pos = get_max_position_embedding(config.prompt_tokenizer)
     set_seed(seed=11, n_gpu=config.n_gpu)
     
     model = CLGP(config)

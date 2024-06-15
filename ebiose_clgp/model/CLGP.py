@@ -21,7 +21,7 @@ class CLGP(nn.Module):
         
         if self.config.text_encoder.name == 'Transformer':
             try:
-                self.text_encoder = Transformer(config)
+                self.text_encoder = Transformer(config, 'prompt')
             except Exception as e: 
                 raise Exception(f"Problem while instantiating the text_encoder model: {e}")
         else:
@@ -29,7 +29,7 @@ class CLGP(nn.Module):
 
         if self.config.node_feature_encoder.name == 'Transformer':
             try:
-                self.node_feature_encoder = Transformer(config)
+                self.node_feature_encoder = Transformer(config, 'node_feature')
             except Exception as e:
                 raise Exception(f"Problem while instantiating the node_feature_encoder model: {e}")
         else:

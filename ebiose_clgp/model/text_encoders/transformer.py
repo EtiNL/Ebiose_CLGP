@@ -36,7 +36,7 @@ class ResidualAttentionBlock(nn.Module):
         return x
 
 class Transformer(nn.Module):
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, type: str):
         super().__init__()
 
         # Extract parameters from the configuration
@@ -45,10 +45,16 @@ class Transformer(nn.Module):
         self.heads = text_encoder_config['heads']
         self.width = text_encoder_config['width']
         self.feedforward_dim = text_encoder_config['feedforward_dim']
-        self.max_position_embeddings = text_encoder_config['max_position_embeddings']
         self.layer_norm_eps = text_encoder_config['layer_norm_eps']
         self.initializer_range = text_encoder_config['initializer_range']
         self.embed_dim = config['embed_dim']
+        
+        if type == 'prompt':
+            self.max_position_embeddings = config.prompt_tokenizer_max_pos
+        elif type == 'node_feature':
+            self.max_position_embeddings = config.graph_node_tokenizer_max_pos
+        else:
+            raise Exception("not a valid Transformer type instantiation")
 
         self.resblocks = nn.Sequential(*[
             ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps, 
