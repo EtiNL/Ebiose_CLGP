@@ -38,16 +38,7 @@ def get_max_position_embedding(tokenizer_path):
     # Load the tokenizer from the file
     tokenizer = Tokenizer.from_file(tokenizer_path)
     
-    # Access the configuration of the tokenizer
-    tokenizer_config = tokenizer.get_vocab_size()
-    
-    # Assuming the tokenizer configuration contains 'max_position_embeddings'
-    max_position_embeddings = tokenizer_config.get('max_position_embeddings', None)
-    
-    if max_position_embeddings is None:
-        raise ValueError("The tokenizer configuration does not contain 'max_position_embeddings'.")
-    
-    return max_position_embeddings
+    return tokenizer.get_vocab_size()-1
     
 if __name__=='__main__':
     # Sample corpus
