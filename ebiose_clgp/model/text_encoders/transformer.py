@@ -14,7 +14,7 @@ class QuickGELU(nn.Module):
         return x * torch.sigmoid(1.702 * x)
 
 class ResidualAttentionBlock(nn.Module):
-    def __init__(self, d_model: int, n_head: int, feedforward_dim: int, layer_norm_eps: float, attn_mask: torch.Tensor = None):
+    def __init__(self, d_model: int, n_head: int, feedforward_dim: int, layer_norm_eps: float, max_position_embeddings: int):
         super().__init__()
         self.attn = nn.MultiheadAttention(d_model, n_head)
         self.ln_1 = LayerNorm(d_model, eps=layer_norm_eps)
@@ -24,11 +24,21 @@ class ResidualAttentionBlock(nn.Module):
             ("c_proj", nn.Linear(feedforward_dim, d_model))
         ]))
         self.ln_2 = LayerNorm(d_model, eps=layer_norm_eps)
-        self.attn_mask = attn_mask
+        self.attn_mask = self.build_attention_mask(max_position_embeddings)
+
+    def build_attention_mask(self, context_length):
+        mask = torch.empty(context_length, context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # Zero out the lower diagonal
+        return mask
 
     def attention(self, x: torch.Tensor):
-        self.attn_mask = self.attn_mask.to(dtype=x.dtype, device=x.device) if self.attn_mask is not None else None
-        return self.attn(x, x, x, need_weights=False, attn_mask=self.attn_mask)[0]
+        if self.attn_mask is not None:
+            attn_mask = self.attn_mask[:x.size(0), :x.size(0)]
+            attn_mask = attn_mask.to(dtype=x.dtype, device=x.device)
+        else:
+            attn_mask = None
+        return self.attn(x, x, x, need_weights=False, attn_mask=attn_mask)[0]
 
     def forward(self, x: torch.Tensor):
         x = x + self.attention(self.ln_1(x))
@@ -58,7 +68,7 @@ class Transformer(nn.Module):
 
         self.resblocks = nn.Sequential(*[
             ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps, 
-                                   self.build_attention_mask(self.max_position_embeddings)) for _ in range(self.layers)])
+                                   self.max_position_embeddings) for _ in range(self.layers)])
         self.ln_final = LayerNorm(self.width, eps=self.layer_norm_eps)
 
         self.token_embedding = nn.Embedding(self.max_position_embeddings, self.width)
@@ -66,12 +76,6 @@ class Transformer(nn.Module):
         self.text_projection = nn.Parameter(torch.empty(self.width, self.embed_dim))
 
         self.initialize()
-
-    def build_attention_mask(self, context_length):
-        mask = torch.empty(context_length, context_length)
-        mask.fill_(float("-inf"))
-        mask.triu_(1)  # Zero out the lower diagonal
-        return mask
 
     def initialize(self):
         # Initialize the weights of the residual attention blocks
