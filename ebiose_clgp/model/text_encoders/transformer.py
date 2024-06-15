@@ -123,5 +123,9 @@ class Transformer(nn.Module):
 
         # Project to the embedding dimension
         x = torch.matmul(x, self.text_projection)
+        
+        # Typically, the first token ([CLS]) is used as the aggregate representation
+        prompt_embedding = x[:, 0, :]  # shape: (batch_size, embedding_dim)
 
-        return x
+
+        return prompt_embedding
