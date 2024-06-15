@@ -34,19 +34,20 @@ class ResidualAttentionBlock(nn.Module):
 
     def attention(self, x: torch.Tensor):
         if self.attn_mask is not None:
-            attn_mask = self.attn_mask[:x.size(0), :x.size(0)]
+            seq_length = x.size(1)
+            attn_mask = self.attn_mask[:seq_length, :seq_length]  # Adjust mask to match the sequence length
             attn_mask = attn_mask.to(dtype=x.dtype, device=x.device)
-            assert attn_mask.shape[0] == x.shape[0] and attn_mask.shape[1] == x.shape[1], f"Attention mask shape mismatch: {attn_mask.shape} vs {x.shape}"
+            assert attn_mask.shape[0] == seq_length and attn_mask.shape[1] == seq_length, f"Attention mask shape mismatch: {attn_mask.shape} vs {x.shape}"
         else:
             attn_mask = None
         return self.attn(x, x, x, need_weights=False, attn_mask=attn_mask)[0]
 
-
-
     def forward(self, x: torch.Tensor):
-        x = x + self.attention(self.ln_1(x))
+        attn_output = self.attention(self.ln_1(x))
+        x = x + attn_output
         x = x + self.mlp(self.ln_2(x))
         return x
+
 
 class Transformer(nn.Module):
     def __init__(self, config: dict, type: str):
@@ -107,17 +108,17 @@ class Transformer(nn.Module):
         nn.init.normal_(self.positional_embedding, std=0.01)
 
     def forward(self, input_ids: torch.Tensor):
-        # Ensure input_ids are within the valid range
-        print(f"Max position embedding for text encoder: {self.max_position_embeddings}")
+        # Assurez-vous que les indices des entrées sont dans les limites valides
         assert input_ids.max().item() < self.max_position_embeddings, f"Max index {input_ids.max().item()} is out of range."
-        
+
         # Embed tokens and positions
         token_embeddings = self.token_embedding(input_ids)
         position_ids = torch.arange(input_ids.shape[1], dtype=torch.long, device=input_ids.device)
         position_embeddings = self.positional_embedding[position_ids]
-        
+
         # Combine token and position embeddings
         x = token_embeddings + position_embeddings
+        assert x.shape[1] <= self.max_position_embeddings, f"Input sequence length {x.shape[1]} exceeds max position embeddings {self.max_position_embeddings}"
 
         # Pass through residual attention blocks
         x = self.resblocks(x)
@@ -127,7 +128,7 @@ class Transformer(nn.Module):
 
         # Project to the embedding dimension
         x = torch.matmul(x, self.text_projection)
-        
+
         # Typically, the first token ([CLS]) is used as the aggregate representation
         prompt_embedding = x[:, 0, :]  # shape: (batch_size, embedding_dim)
 
