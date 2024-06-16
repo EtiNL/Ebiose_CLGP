@@ -60,6 +60,7 @@ class Transformer(nn.Module):
         
         if type == 'prompt':
             self.max_position_embeddings = config.prompt_tokenizer_max_pos
+            print('prompt max pos embedding', self.max_position_embeddings)
         elif type == 'node_feature':
             self.max_position_embeddings = config.graph_node_tokenizer_max_pos
         else:
@@ -72,6 +73,7 @@ class Transformer(nn.Module):
 
         self.token_embedding = nn.Embedding(self.max_position_embeddings, self.width)
         self.positional_embedding = nn.Parameter(torch.empty(self.max_position_embeddings, self.width))
+        print('positional embedding.shape', self.positional_embedding.shape)
         self.text_projection = nn.Parameter(torch.empty(self.width, self.embed_dim))
 
         self.initialize()
