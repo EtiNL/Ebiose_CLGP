@@ -111,6 +111,7 @@ class Transformer(nn.Module):
         # Embed tokens and positions
         token_embeddings = self.token_embedding(input_ids)
         position_ids = torch.arange(input_ids.shape[1], dtype=torch.long, device=input_ids.device)
+        print('max inputs_ids: ',input_ids.shape[1])
         position_embeddings = self.positional_embedding[position_ids]
         
         # Combine token and position embeddings
