@@ -38,7 +38,7 @@ def get_max_position_embedding(tokenizer_path):
     # Load the tokenizer from the file
     tokenizer = Tokenizer.from_file(tokenizer_path)
     
-    return tokenizer.get_vocab_size()-1
+    return tokenizer.get_vocab_size()
     
 if __name__=='__main__':
     # Sample corpus
