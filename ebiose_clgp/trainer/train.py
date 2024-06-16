@@ -106,7 +106,7 @@ def train(config, train_dataset, model):
                 if global_step % config.logging_steps == 0:
                     wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]})
 
-                print("Loss:", loss.item())
+                # print("Loss:", loss.item())
 
             # Add memory diagnostics
             # print(torch.cuda.memory_summary(device=config.device, abbreviated=False))
