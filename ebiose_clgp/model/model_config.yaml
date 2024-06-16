@@ -2,7 +2,8 @@ embed_dim: 256
 
 graph_encoder:
   name: 'GCN'
-  hidden: 4
+  layers: 10
+  hidden: 128
 
 node_feature_encoder:
   name: 'Transformer'

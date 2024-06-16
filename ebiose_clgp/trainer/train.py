@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import os
 from omegaconf import OmegaConf
 from torch.cuda.amp import autocast, GradScaler
+from tqdm import tqdm
 
 from ebiose_clgp.data_utils.dataloader import get_dataloader
 from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
@@ -47,7 +48,7 @@ def train(config, train_dataset, model):
 
     scaler = GradScaler()
     
-    for epoch in range(int(config.num_train_epochs)):
+    for epoch in tqdm(range(int(config.num_train_epochs))):
         for step, batch in enumerate(train_dataloader):
             torch.cuda.empty_cache()  # Clear the cache
             with autocast():

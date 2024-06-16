@@ -2,27 +2,29 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, global_mean_pool
-from torch_geometric.data import Data
 
 class GCN(nn.Module):
     def __init__(self, config):
         super(GCN, self).__init__()
         
         in_channels, hidden_channels, out_channels = config.embed_dim, config.graph_encoder.hidden, config.embed_dim
+        self.layers = config.graph_encoder.layers
         
-        self.conv1 = GCNConv(in_channels, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, out_channels)
+        self.convs = nn.ModuleList()
+        self.convs.append(GCNConv(in_channels, hidden_channels))
+        
+        for _ in range(self.layers - 2):
+            self.convs.append(GCNConv(hidden_channels, hidden_channels))
+        
+        self.convs.append(GCNConv(hidden_channels, out_channels))
         self.fc = nn.Linear(out_channels, out_channels)
         
     def initialize(self):
         # Initialize convolutional layers
-        nn.init.xavier_uniform_(self.conv1.lin.weight)
-        if self.conv1.lin.bias is not None:
-            nn.init.zeros_(self.conv1.lin.bias)
-        
-        nn.init.xavier_uniform_(self.conv2.lin.weight)
-        if self.conv2.lin.bias is not None:
-            nn.init.zeros_(self.conv2.lin.bias)
+        for conv in self.convs:
+            nn.init.xavier_uniform_(conv.lin.weight)
+            if conv.lin.bias is not None:
+                nn.init.zeros_(conv.lin.bias)
 
         # Initialize the fully connected layer
         nn.init.xavier_uniform_(self.fc.weight)
@@ -40,21 +42,11 @@ class GCN(nn.Module):
         
         x, edge_index, batch = graph_data.x, graph_data.edge_index, graph_data.batch
         
-        # print(f"x shape input shape: {x.shape}")
-        
-        
-        x = self.conv1(x, edge_index)
-        x = F.relu(x)
-        x = self.conv2(x, edge_index)
-        x = F.relu(x)
-        
-        # Add print statements to debug shapes
-        # print(f"x shape before pooling: {x.shape}")
-        # print(f"batch shape: {batch.shape}")
+        for conv in self.convs:
+            x = conv(x, edge_index)
+            x = F.relu(x)
         
         x = global_mean_pool(x, batch)
-        
-        # print(f"x shape after pooling: {x.shape}")
-        
         x = self.fc(x)
+        
         return F.relu(x)
