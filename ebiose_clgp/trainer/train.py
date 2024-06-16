@@ -20,11 +20,16 @@ DATA_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/data_utils/data_config.yaml'
 TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/train_config.yaml'
 MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/model_config.yaml'
 
+def log_gradients(model, step):
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            wandb.log({f"gradients/{name}": wandb.Histogram(param.grad.cpu().data.numpy())}, step=step)
+
 def train(config, train_dataset, model):
     config.train_batch_size = config.per_gpu_train_batch_size * max(1, config.n_gpu)
     train_dataloader = get_dataloader(config, train_dataset, is_train=True)
 
-    # total training iterations
+    # Total training iterations
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
     
     optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
@@ -39,9 +44,14 @@ def train(config, train_dataset, model):
     model = model.to(torch.device(config.device))
     model.train()
     
-    wandbconfig.learning_rate = config.optimizer.lr
-    wandbconfig.batch_size = config.train_batch_size
-    wandbconfig.epochs = config.num_train_epochs
+    wandb.config.update({
+        "learning_rate": config.optimizer.lr,
+        "batch_size": config.train_batch_size,
+        "epochs": config.num_train_epochs,
+        "weight_decay": config.optimizer.weight_decay,
+        "eps": config.optimizer.eps,
+        "gradient_accumulation_steps": config.gradient_accumulation_steps
+    })
 
     global_step, global_loss, global_acc = 0, 0.0, 0.0
     model.zero_grad()
@@ -57,10 +67,6 @@ def train(config, train_dataset, model):
                 input_graphs = input_graphs.to(torch.device(config.device))
                 input_texts = input_texts.to(torch.device(config.device))
                 
-                # Debugging information
-                # print(f"Batch {step}: Input graphs shape: {input_graphs.x.shape}, Edge index shape: {input_graphs.edge_index.shape}")
-                # print(f"Batch {step}: Input texts shape: {input_texts.shape}")
-
                 graph_features, text_features = model(input_graphs, input_texts)
 
                 graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
@@ -104,12 +110,8 @@ def train(config, train_dataset, model):
                     scheduler.step()
 
                 if global_step % config.logging_steps == 0:
-                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]})
-
-                # print("Loss:", loss.item())
-
-            # Add memory diagnostics
-            # print(torch.cuda.memory_summary(device=config.device, abbreviated=False))
+                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]}, step=global_step)
+                    log_gradients(model, global_step)
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
@@ -155,12 +157,8 @@ def main():
 
     config = OmegaConf.merge(train_config, data_config, model_config)
 
-    global wandbconfig
-
     wandb.init(project='Ebiose_CLGP')
 
-    wandbconfig = wandb.config
-    
     mkdir(path=config.saved_checkpoints)
 
     config.device = "cuda" if torch.cuda.is_available() else "cpu"
