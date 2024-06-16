@@ -108,7 +108,7 @@ def train(config, train_dataset, model):
                 print("Loss:", loss.item())
 
             # Add memory diagnostics
-            print(torch.cuda.memory_summary(device=config.device, abbreviated=False))
+            # print(torch.cuda.memory_summary(device=config.device, abbreviated=False))
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
