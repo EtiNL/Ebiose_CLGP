@@ -14,7 +14,7 @@ class QuickGELU(nn.Module):
         return x * torch.sigmoid(1.702 * x)
 
 class ResidualAttentionBlock(nn.Module):
-    def __init__(self, d_model: int, n_head: int, feedforward_dim: int, layer_norm_eps: float, max_position_embeddings: int):
+    def __init__(self, d_model: int, n_head: int, feedforward_dim: int, layer_norm_eps: float):
         super().__init__()
         self.attn = nn.MultiheadAttention(d_model, n_head)
         self.ln_1 = LayerNorm(d_model, eps=layer_norm_eps)
@@ -24,7 +24,6 @@ class ResidualAttentionBlock(nn.Module):
             ("c_proj", nn.Linear(feedforward_dim, d_model))
         ]))
         self.ln_2 = LayerNorm(d_model, eps=layer_norm_eps)
-        self.max_position_embeddings = max_position_embeddings
 
     def build_attention_mask(self, seq_length):
         mask = torch.empty(seq_length, seq_length)
@@ -60,20 +59,19 @@ class Transformer(nn.Module):
         
         if type == 'prompt':
             self.max_position_embeddings = config.prompt_tokenizer_max_pos
-            print('prompt max pos embedding', self.max_position_embeddings)
+            self.context_lenght = config.prompt_context_length
         elif type == 'node_feature':
             self.max_position_embeddings = config.graph_node_tokenizer_max_pos
+            self.context_lenght = config.node_feature_context_length
         else:
             raise Exception("not a valid Transformer type instantiation")
 
         self.resblocks = nn.Sequential(*[
-            ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps, 
-                                   self.max_position_embeddings) for _ in range(self.layers)])
+            ResidualAttentionBlock(self.width, self.heads, self.feedforward_dim, self.layer_norm_eps) for _ in range(self.layers)])
         self.ln_final = LayerNorm(self.width, eps=self.layer_norm_eps)
 
         self.token_embedding = nn.Embedding(self.max_position_embeddings, self.width)
-        self.positional_embedding = nn.Parameter(torch.empty(self.max_position_embeddings, self.width))
-        print('positional embedding.shape', self.positional_embedding.shape)
+        self.positional_embedding = nn.Parameter(torch.empty(self.context_lenght, self.width))
         self.text_projection = nn.Parameter(torch.empty(self.width, self.embed_dim))
 
         self.initialize()
@@ -111,7 +109,6 @@ class Transformer(nn.Module):
         # Embed tokens and positions
         token_embeddings = self.token_embedding(input_ids)
         position_ids = torch.arange(input_ids.shape[1], dtype=torch.long, device=input_ids.device)
-        print('max inputs_ids: ',input_ids.shape[1])
         position_embeddings = self.positional_embedding[position_ids]
         
         # Combine token and position embeddings
