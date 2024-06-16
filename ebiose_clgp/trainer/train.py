@@ -48,8 +48,8 @@ def train(config, train_dataset, model):
 
     scaler = GradScaler()
     
-    for epoch in tqdm(range(int(config.num_train_epochs))):
-        for step, batch in enumerate(train_dataloader):
+    for epoch in range(int(config.num_train_epochs)):
+        for step, batch in tqdm(enumerate(train_dataloader)):
             torch.cuda.empty_cache()  # Clear the cache
             with autocast():
                 input_graphs, input_texts = batch
