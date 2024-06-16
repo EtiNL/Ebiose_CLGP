@@ -57,15 +57,15 @@ def train(config, train_dataset, model):
                 input_texts = input_texts.to(torch.device(config.device))
                 
                 # Debugging information
-                print(f"Batch {step}: Input graphs shape: {input_graphs.x.shape}, Edge index shape: {input_graphs.edge_index.shape}")
-                print(f"Batch {step}: Input texts shape: {input_texts.shape}")
+                # print(f"Batch {step}: Input graphs shape: {input_graphs.x.shape}, Edge index shape: {input_graphs.edge_index.shape}")
+                # print(f"Batch {step}: Input texts shape: {input_texts.shape}")
 
                 graph_features, text_features = model(input_graphs, input_texts)
 
                 graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
                 text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-
-                if config.n_gpu == 1:
+                
+                if config.n_gpu <= 1:
                     logit_scale = model.logit_scale.exp()
                 elif config.n_gpu > 1:
                     logit_scale = model.module.logit_scale.exp()
@@ -108,7 +108,7 @@ def train(config, train_dataset, model):
                 print("Loss:", loss.item())
 
             # Add memory diagnostics
-            print(torch.cuda.memory_summary(device=None, abbreviated=False))
+            print(torch.cuda.memory_summary(device=config.device, abbreviated=False))
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)

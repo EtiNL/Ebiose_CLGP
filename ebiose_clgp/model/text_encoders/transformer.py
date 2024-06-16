@@ -104,7 +104,7 @@ class Transformer(nn.Module):
 
     def forward(self, input_ids: torch.Tensor):
         # Ensure input_ids are within the valid range
-        assert input_ids.max().item() < self.max_position_embeddings, f"Max index {input_ids.max().item()} is out of range."
+        # assert input_ids.max().item() < self.max_position_embeddings, f"Max index {input_ids.max().item()} is out of range."
         
         # Embed tokens and positions
         token_embeddings = self.token_embedding(input_ids)
@@ -115,7 +115,7 @@ class Transformer(nn.Module):
         x = token_embeddings + position_embeddings
 
         # Check sequence length
-        assert x.shape[1] <= self.context_lenght, f"Input sequence length {x.shape[1]} exceeds context_length {self.context_lenght}"
+        # assert x.shape[1] <= self.context_lenght, f"Input sequence length {x.shape[1]} exceeds context_length {self.context_lenght}"
 
         # Pass through residual attention blocks
         x = self.resblocks(x)

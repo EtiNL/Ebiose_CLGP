@@ -50,8 +50,8 @@ class CLGP(nn.Module):
         graphs.x = embedded_node_features
 
         graph_features = self.graph_encoder(graphs)
-        print('graph forward ok')
-        print('text.shape: ', texts.shape)
+        # print('graph forward ok')
+        # print('text.shape: ', texts.shape)
         text_features = self.text_encoder(texts)
 
         return graph_features, text_features
