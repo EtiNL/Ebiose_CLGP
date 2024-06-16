@@ -1,5 +1,5 @@
 neo4j==5.20.0
-numpy==1.26.4
+numpy==2.0.0
 omegaconf==2.3.0
 pgvector==0.2.5
 plotly==5.22.0
@@ -9,4 +9,6 @@ setuptools==63.2.0
 tokenizers==0.19.1
 torch==2.3.0
 torch_geometric==2.5.3
+tqdm==4.66.4
+transformers==4.41.2
 wandb
