@@ -115,7 +115,7 @@ def train(config, train_dataset, model):
 
                 if global_step % config.logging_steps == 0:
                     wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]}, step=global_step)
-                    log_gradients(model, global_step)
+                    # log_gradients(model, global_step)
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
