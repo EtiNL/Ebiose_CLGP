@@ -115,7 +115,7 @@ class Transformer(nn.Module):
         x = token_embeddings + position_embeddings
 
         # Check sequence length
-        assert x.shape[1] <= self.max_position_embeddings, f"Input sequence length {x.shape[1]} exceeds max position embeddings {self.max_position_embeddings}"
+        assert x.shape[1] <= self.context_lenght, f"Input sequence length {x.shape[1]} exceeds context_length {self.context_lenght}"
 
         # Pass through residual attention blocks
         x = self.resblocks(x)
