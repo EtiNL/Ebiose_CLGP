@@ -4,6 +4,7 @@ import os
 from omegaconf import OmegaConf
 from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
+from torch.nn.utils import clip_grad_norm_
 
 from ebiose_clgp.data_utils.dataloader import get_dataloader
 from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
@@ -93,6 +94,9 @@ def train(config, train_dataset, model):
                     loss = loss / config.gradient_accumulation_steps
 
             scaler.scale(loss).backward()
+
+            # Clip gradients
+            clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             if (step + 1) % config.gradient_accumulation_steps == 0:
                 global_step += 1
