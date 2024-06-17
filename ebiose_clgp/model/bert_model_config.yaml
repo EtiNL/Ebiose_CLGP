@@ -1,0 +1,10 @@
+graph_encoder:
+  name: 'GCN'
+  layers: 3
+  hidden: 256
+
+node_feature_encoder:
+  name: 'Bert'
+
+text_encoder:
+  name: 'Bert'
