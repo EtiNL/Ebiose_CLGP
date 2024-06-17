@@ -8,14 +8,20 @@ from torch_geometric.data import Data
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
 
-    def __init__(self, config):
+    def __init__(self, config, tokenizer = None):
         super(CLGP_Ebiose_dataset, self).__init__()
 
-        self.config = config
-        self.prompt_context_length = self.config.prompt_context_length
-        self.node_feature_context_length = self.config.node_feature_context_length
-        self.prompt_tokenizer = Tokenizer.from_file(self.config.prompt_tokenizer)
-        self.graph_feature_tokenizer = Tokenizer.from_file(self.config.graph_feature_tokenizer)
+        if tokenizer == None:
+            self.custom_tokenizer = True
+            self.config = config
+            self.prompt_context_length = self.config.prompt_context_length
+            self.node_feature_context_length = self.config.node_feature_context_length
+            self.prompt_tokenizer = Tokenizer.from_file(self.config.prompt_tokenizer)
+            self.graph_feature_tokenizer = Tokenizer.from_file(self.config.graph_feature_tokenizer)
+        
+        else:
+            self.custom_tokenizer = False
+            self.tokenizer = tokenizer
         
         with open(self.config.graph_data_file, 'r') as f:
             self.graph_data = []
@@ -37,10 +43,13 @@ class CLGP_Ebiose_dataset(Dataset):
         return pairs
 
     def tokenize_prompt(self, text):
-        tokens = self.prompt_tokenizer.encode(text).ids
-        result = torch.zeros(self.prompt_context_length, dtype=torch.long)
-        result[:len(tokens)] = torch.tensor(tokens[:self.prompt_context_length])  # Truncate if necessary
-        return result
+        if self.custom_tokenizer:
+            tokens = self.prompt_tokenizer.encode(text).ids
+            result = torch.zeros(self.prompt_context_length, dtype=torch.long)
+            result[:len(tokens)] = torch.tensor(tokens[:self.prompt_context_length])  # Truncate if necessary
+            return result
+        else:
+            return self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)
 
 
     def __len__(self):
@@ -79,11 +88,18 @@ class CLGP_Ebiose_dataset(Dataset):
 
         # Tokenize Node Features
         node_features_tensor = []
-        for features in node_features:
-            tokenized_features = torch.zeros((self.node_feature_context_length), dtype=torch.long)
-            tokens = self.graph_feature_tokenizer.encode(features).ids
-            tokenized_features[:len(tokens)] = torch.tensor(tokens)
-            node_features_tensor.append(tokenized_features)
+        
+        if self.custom_tokenizer:
+            for features in node_features:
+                tokenized_features = torch.zeros((self.node_feature_context_length), dtype=torch.long)
+                tokens = self.graph_feature_tokenizer.encode(features).ids
+                tokenized_features[:len(tokens)] = torch.tensor(tokens)
+                node_features_tensor.append(tokenized_features)
+                
+        else:
+            for features in node_features:
+                node_features_tensor.append(self.tokenizer(features, return_tensors='pt', padding=True, truncation=True))
+                
         node_features_tensor = torch.stack(node_features_tensor).float()  # Ensure node features are float
 
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()

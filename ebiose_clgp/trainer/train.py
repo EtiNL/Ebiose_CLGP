@@ -12,6 +12,7 @@ from ebiose_clgp.model.CLGP import CLGP
 from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
+from ebiose_clgp.model.text_encoders.bert import get_Bert
 
 from torch.optim import AdamW
 
@@ -167,13 +168,22 @@ def main():
 
     config.device = "cuda" if torch.cuda.is_available() else "cpu"
     config.n_gpu = torch.cuda.device_count()
-    config.graph_node_tokenizer_max_pos = get_max_position_embedding(config.graph_feature_tokenizer)
-    config.prompt_tokenizer_max_pos = get_max_position_embedding(config.prompt_tokenizer)
+    
+    if config.text_encoder.name == 'Transformer':
+        config.graph_node_tokenizer_max_pos = get_max_position_embedding(config.graph_feature_tokenizer)
+        config.prompt_tokenizer_max_pos = get_max_position_embedding(config.prompt_tokenizer)
+        tokenizer = None
+        model = None
+        
+    elif config.text_encoder.name == 'Bert':
+        tokenizer, model = get_Bert()
+        config.embed_dim = 768 #Bert embbeding dimension
+        
     set_seed(seed=11, n_gpu=config.n_gpu)
     
-    model = CLGP(config)
+    model = CLGP(config, model)
 
-    train_dataset = CLGP_Ebiose_dataset(config)
+    train_dataset = CLGP_Ebiose_dataset(config, tokenizer = tokenizer)
     
     global_step, avg_loss = train(config, train_dataset, model)
     
