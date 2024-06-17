@@ -103,7 +103,7 @@ def train(config, train_dataset, val_dataset, model):
     
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in tqdm(enumerate(train_dataloader)):
-            torch.cuda.empty_cache()  # Clear the cache
+            # torch.cuda.empty_cache()  # Clear the cache
             with autocast():
                 input_graphs, input_texts = batch
 
