@@ -165,8 +165,6 @@ def train(config, train_dataset, val_dataset, model):
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
-                    
-    wandb.save(config.model_save_name)
     
     return global_step, global_loss / global_step
 
@@ -174,7 +172,7 @@ def save_checkpoint(config, epoch, global_step, model, optimizer):
     '''
     Checkpointing. Saves model and optimizer state_dict() and current epoch and global training steps.
     '''
-    checkpoint_path = os.path.join(config.saved_checkpoints, f'checkpoint_{epoch}_{global_step}.pt')
+    checkpoint_path = os.path.join(config.saved_checkpoints, f'{config.model_save_name}_checkpoint_{epoch}_{global_step}.pt')
     save_num = 0
     while save_num < 10:
         try:
@@ -192,7 +190,11 @@ def save_checkpoint(config, epoch, global_step, model, optimizer):
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()
                 }, checkpoint_path)
+                
+            wandb.save(checkpoint_path)
+            
             break
+        
         except Exception as e:
             save_num += 1
             print(f"Failed to save checkpoint: {e}")
@@ -223,6 +225,8 @@ def main():
     elif config.text_encoder.name == 'Bert':
         tokenizer, model = get_Bert()
         config.embed_dim = 768 #Bert embbeding dimension
+    
+    config.model_save_name = wandb.run.name
         
     set_seed(seed=11, n_gpu=config.n_gpu)
     

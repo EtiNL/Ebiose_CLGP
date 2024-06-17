@@ -5,9 +5,6 @@
 
 # text encoders
 - add other architectures like REact to test
-- add attention mask to bert: 
-                              attention_mask = torch.tensor([[1, 1, 1, 1, 1, 1], [1, 0, 0, 0, 0, 0]])
-                              output = model(input_ids, attention_mask=attention_mask)
 
 # train
 - add an hyperparameter gridsearch
