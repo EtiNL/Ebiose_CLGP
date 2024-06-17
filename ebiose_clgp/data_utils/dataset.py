@@ -98,7 +98,7 @@ class CLGP_Ebiose_dataset(Dataset):
             for features in node_features:
                 tokenized_features = self.tokenizer(features, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
                 node_features_tensor.append(tokenized_features)
-            print("dataset tokenized_feature shape: ", tokenized_features.shape)
+                print("dataset tokenized_feature shape: ", tokenized_features.shape)
         node_features_tensor = torch.stack(node_features_tensor).float()  # Ensure node features are float
 
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
