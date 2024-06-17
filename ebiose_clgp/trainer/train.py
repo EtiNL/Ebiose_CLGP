@@ -20,8 +20,8 @@ from torch.optim import AdamW
 import wandb
 
 DATA_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/data_utils/data_config.yaml'
-TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/train_config.yaml'
-MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/model_config.yaml'
+TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/bert_train_config.yaml'
+MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/bert_model_config.yaml'
 
 def log_gradients(model, step):
     for name, param in model.named_parameters():
