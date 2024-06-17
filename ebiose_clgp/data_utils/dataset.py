@@ -42,13 +42,20 @@ class CLGP_Ebiose_dataset(Dataset):
         return pairs
 
     def tokenize_prompt(self, text):
+        max_length = self.prompt_context_length
         if self.custom_tokenizer:
             tokens = self.prompt_tokenizer.encode(text).ids
             result = torch.zeros(self.prompt_context_length, dtype=torch.long)
             result[:len(tokens)] = torch.tensor(tokens[:self.prompt_context_length])  # Truncate if necessary
             return result
         else:
-            return self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
+            tokenized_features = self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
+            if tokenized_features.size(0) < max_length:
+                    padded_features = torch.cat((tokenized_features, torch.zeros(max_length - tokenized_features.size(0), dtype=torch.long)))
+            else:
+                padded_features = tokenized_features[:max_length]
+                
+            return padded_features
 
     def __len__(self):
         return len(self.pairs)
@@ -86,19 +93,24 @@ class CLGP_Ebiose_dataset(Dataset):
 
         # Tokenize Node Features
         node_features_tensor = []
+        max_length = self.node_feature_context_length
         
         if self.custom_tokenizer:
             for features in node_features:
-                tokenized_features = torch.zeros((self.node_feature_context_length), dtype=torch.long)
+                tokenized_features = torch.zeros((max_length), dtype=torch.long)
                 tokens = self.graph_feature_tokenizer.encode(features).ids
-                tokenized_features[:len(tokens)] = torch.tensor(tokens)
+                tokenized_features[:min(len(tokens), max_length)] = torch.tensor(tokens[:max_length])
                 node_features_tensor.append(tokenized_features)
                 
         else:
             for features in node_features:
                 tokenized_features = self.tokenizer(features, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
-                node_features_tensor.append(tokenized_features)
-                print("dataset tokenized_feature shape: ", tokenized_features.shape)
+                if tokenized_features.size(0) < max_length:
+                    padded_features = torch.cat((tokenized_features, torch.zeros(max_length - tokenized_features.size(0), dtype=torch.long)))
+                else:
+                    padded_features = tokenized_features[:max_length]
+                node_features_tensor.append(padded_features)
+                
         node_features_tensor = torch.stack(node_features_tensor).float()  # Ensure node features are float
 
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
