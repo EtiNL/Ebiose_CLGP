@@ -11,9 +11,9 @@ class CLGP_Ebiose_dataset(Dataset):
     def __init__(self, config, tokenizer = None):
         super(CLGP_Ebiose_dataset, self).__init__()
 
+        self.config = config
         if tokenizer == None:
             self.custom_tokenizer = True
-            self.config = config
             self.prompt_context_length = self.config.prompt_context_length
             self.node_feature_context_length = self.config.node_feature_context_length
             self.prompt_tokenizer = Tokenizer.from_file(self.config.prompt_tokenizer)

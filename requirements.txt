@@ -1,5 +1,5 @@
 neo4j==5.20.0
-numpy==1.23
+numpy==1.25.2
 omegaconf==2.3.0
 pgvector==0.2.5
 plotly==5.22.0
