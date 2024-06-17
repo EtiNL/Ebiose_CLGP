@@ -60,7 +60,7 @@ class CLGP(nn.Module):
         if self.custom_node_feature_encoder:
             embedded_node_features = self.node_feature_encoder(node_features.long())
         else:
-            embedded_node_features = (self.node_feature_encoder(**node_features.long()).last_hidden_state)[:, 0, :]
+            embedded_node_features = (self.node_feature_encoder(node_features.long()).last_hidden_state)[:, 0, :]
         graphs.x = embedded_node_features
 
         graph_features = self.graph_encoder(graphs)
@@ -68,6 +68,6 @@ class CLGP(nn.Module):
         if self.custom_text_encoder:
             text_features = self.text_encoder(texts)
         else:
-            text_features = (self.text_encoder(**texts).last_hidden_state)[:, 0, :]
+            text_features = (self.text_encoder(texts).last_hidden_state)[:, 0, :]
 
         return graph_features, text_features
