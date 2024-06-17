@@ -8,21 +8,20 @@ from torch_geometric.data import Data
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
 
-    def __init__(self, config, tokenizer = None):
+    def __init__(self, config, tokenizer=None):
         super(CLGP_Ebiose_dataset, self).__init__()
 
         self.config = config
-        if tokenizer == None:
+        if tokenizer is None:
             self.custom_tokenizer = True
             self.prompt_context_length = self.config.prompt_context_length
             self.node_feature_context_length = self.config.node_feature_context_length
             self.prompt_tokenizer = Tokenizer.from_file(self.config.prompt_tokenizer)
             self.graph_feature_tokenizer = Tokenizer.from_file(self.config.graph_feature_tokenizer)
-        
         else:
             self.custom_tokenizer = False
             self.tokenizer = tokenizer
-        
+
         with open(self.config.graph_data_file, 'r') as f:
             self.graph_data = []
             for line in f:
@@ -49,8 +48,7 @@ class CLGP_Ebiose_dataset(Dataset):
             result[:len(tokens)] = torch.tensor(tokens[:self.prompt_context_length])  # Truncate if necessary
             return result
         else:
-            return self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)
-
+            return self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
 
     def __len__(self):
         return len(self.pairs)
@@ -60,7 +58,7 @@ class CLGP_Ebiose_dataset(Dataset):
         graph_input = self.process_graph(graph)
         text_input = self.tokenize_prompt(question)
         return graph_input, text_input
-    
+
     def process_graph(self, graph_struct):
         # Extract node features
         shared_context_prompt = graph_struct.get('shared_context_prompt', '')
@@ -98,8 +96,9 @@ class CLGP_Ebiose_dataset(Dataset):
                 
         else:
             for features in node_features:
-                node_features_tensor.append(self.tokenizer(features, return_tensors='pt', padding=True, truncation=True))
-                
+                tokenized_features = self.tokenizer(features, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
+                node_features_tensor.append(tokenized_features)
+            print("dataset tokenized_feature shape: ", tokenized_features.shape)
         node_features_tensor = torch.stack(node_features_tensor).float()  # Ensure node features are float
 
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
