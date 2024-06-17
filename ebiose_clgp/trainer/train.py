@@ -5,11 +5,12 @@ from omegaconf import OmegaConf
 from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 from torch.nn.utils import clip_grad_norm_
+from torch.utils.data import DataLoader
 
 from ebiose_clgp.data_utils.dataloader import get_dataloader
 from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
 from ebiose_clgp.model.CLGP import CLGP
-from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, set_seed
+from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, set_seed
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 from ebiose_clgp.model.text_encoders.bert import get_Bert
@@ -27,9 +28,49 @@ def log_gradients(model, step):
         if param.grad is not None:
             wandb.log({f"gradients/{name}": wandb.Histogram(param.grad.cpu().data.numpy())}, step=step)
 
-def train(config, train_dataset, model):
+def evaluate(config, model, validation_dataloader):
+    model.eval()
+    total_loss = 0.0
+    with torch.no_grad():
+        for step, batch in enumerate(validation_dataloader):
+            input_graphs, input_texts = batch
+
+            input_graphs = input_graphs.to(torch.device(config.device))
+            input_texts = input_texts.to(torch.device(config.device))
+            
+            graph_features, text_features = model(input_graphs, input_texts)
+
+            graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+            
+            if config.n_gpu <= 1:
+                logit_scale = model.logit_scale.exp()
+            elif config.n_gpu > 1:
+                logit_scale = model.module.logit_scale.exp()
+
+            logits_per_graph = logit_scale * graph_features @ text_features.t()
+            logits_per_text = logit_scale * text_features @ graph_features.t()
+
+            labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
+
+            graph_loss = F.cross_entropy(logits_per_graph, labels)
+            text_loss = F.cross_entropy(logits_per_text, labels)
+
+            loss = (graph_loss + text_loss) / 2
+
+            if config.n_gpu > 1: 
+                loss = loss.mean()
+
+            total_loss += loss.item()
+
+    return total_loss / len(validation_dataloader)
+
+def train(config, train_dataset, val_dataset, model):
     config.train_batch_size = config.per_gpu_train_batch_size * max(1, config.n_gpu)
+    config.eval_batch_size = config.per_gpu_eval_batch_size * max(1, config.n_gpu)
+    
     train_dataloader = get_dataloader(config, train_dataset, is_train=True)
+    val_dataloader = get_dataloader(config, val_dataset, is_train=False)
 
     # Total training iterations
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
@@ -118,6 +159,10 @@ def train(config, train_dataset, model):
                     wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]}, step=global_step)
                     # log_gradients(model, global_step)
 
+                if global_step % config.eval_steps == 0:
+                    val_loss = evaluate(config, model, val_dataloader)
+                    wandb.log({'val_loss': val_loss}, step=global_step)
+
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
                     
@@ -183,9 +228,10 @@ def main():
     
     model = CLGP(config, model)
 
-    train_dataset = CLGP_Ebiose_dataset(config, tokenizer = tokenizer)
-    
-    global_step, avg_loss = train(config, train_dataset, model)
+    dataset = CLGP_Ebiose_dataset(config, tokenizer=tokenizer)
+    train_dataset, val_dataset, test_dataset = dataset.train_validation_test_split()
+
+    global_step, avg_loss = train(config, train_dataset, val_dataset, model)
     
     print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
 

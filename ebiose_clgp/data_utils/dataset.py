@@ -1,4 +1,4 @@
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, random_split
 import torch
 import pickle as pkl
 import json
@@ -117,3 +117,9 @@ class CLGP_Ebiose_dataset(Dataset):
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
 
         return (node_features_tensor, edge_index)
+    
+    def train_validation_test_split(self, train_ratio=0.8, val_ratio=0.1):
+        train_size = int(train_ratio * len(self))
+        val_size = int(val_ratio * len(self))
+        test_size = len(self) - train_size - val_size
+        return random_split(self, [train_size, val_size, test_size])
