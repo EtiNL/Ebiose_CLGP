@@ -4,6 +4,7 @@ import pickle as pkl
 import json
 from tokenizers import Tokenizer
 from torch_geometric.data import Data
+import hashlib
 
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
@@ -31,15 +32,29 @@ class CLGP_Ebiose_dataset(Dataset):
         validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
         self.prompts_data = validation_set["question"]
 
+        self.graph_hashmap = {}
+        self.prompt_hashmap = {}
+        self.evaluation_map = {}
+        
         self.pairs = self.create_pairs()
 
     def create_pairs(self):
         pairs = []
         for graph, evaluations in self.graph_data:
             for i in range(len(evaluations['evaluations'])):
+                processed_graph = self.process_graph(graph['graph'])
+                prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
+                tokenized_prompt = self.tokenize_prompt(prompt)
+
+                graph_hash = self.hash_tensor(processed_graph)
+                prompt_hash = self.hash_tensor(tokenized_prompt)
+
+                self.graph_hashmap[graph_hash] = processed_graph
+                self.prompt_hashmap[prompt_hash] = tokenized_prompt
+                self.evaluation_map[(graph_hash, prompt_hash)] = evaluations['evaluations'][i]
+
                 if evaluations['evaluations'][i]:  # Only consider successful evaluations
-                    prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
-                    pairs.append((graph['graph'], prompt))
+                    pairs.append((processed_graph, tokenized_prompt))
         return pairs
 
     def tokenize_prompt(self, text):
@@ -62,10 +77,7 @@ class CLGP_Ebiose_dataset(Dataset):
         return len(self.pairs)
 
     def __getitem__(self, idx):
-        graph, question = self.pairs[idx]
-        graph_input = self.process_graph(graph)
-        text_input = self.tokenize_prompt(question)
-        return graph_input, text_input
+        return self.pairs[idx]
 
     def process_graph(self, graph_struct):
         # Extract node features
@@ -118,6 +130,10 @@ class CLGP_Ebiose_dataset(Dataset):
 
         return (node_features_tensor, edge_index)
     
+    def hash_tensor(self, tensor):
+        """Generate a hash for a given tensor."""
+        return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
+
     def train_validation_test_split(self, train_ratio=0.8, val_ratio=0.1):
         train_size = int(train_ratio * len(self))
         val_size = int(val_ratio * len(self))
