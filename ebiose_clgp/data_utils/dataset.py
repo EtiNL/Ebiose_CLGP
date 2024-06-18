@@ -1,9 +1,8 @@
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import Dataset, random_split, Subset
 import torch
 import pickle as pkl
 import json
 from tokenizers import Tokenizer
-from torch.utils.data import Subset
 import hashlib
 from tqdm import tqdm
 
@@ -37,12 +36,13 @@ class CLGP_Ebiose_dataset(Dataset):
         self.prompt_hashmap = {}
         self.evaluation_map = {}
         
+        self.index_map = {}  # Dictionary to map index to (graph_hash, prompt_hash)
         self.pairs = self.create_pairs()
 
     def create_pairs(self):
         print("creating pairs...")
         pairs = []
-        for graph, evaluations in tqdm(self.graph_data):
+        for idx, (graph, evaluations) in enumerate(tqdm(self.graph_data)):
             for i in range(len(evaluations['evaluations'])):
                 processed_graph = self.process_graph(graph['graph'])
                 node_features_tensor, edge_index = processed_graph
@@ -58,6 +58,7 @@ class CLGP_Ebiose_dataset(Dataset):
 
                 if evaluations['evaluations'][i]:  # Only consider successful evaluations
                     pairs.append((processed_graph, tokenized_prompt))
+                    self.index_map[len(pairs) - 1] = (graph_hash, prompt_hash)
         print("end creating pairs")
         return pairs
 
