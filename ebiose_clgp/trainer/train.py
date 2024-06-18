@@ -227,7 +227,7 @@ def main():
         config.embed_dim = 768 #Bert embbeding dimension
     
     config.model_save_name = wandb.run.name
-    print(config.eval_hist_bins)
+    
     set_seed(seed=11, n_gpu=config.n_gpu)
     
     model = CLGP(config, model)
