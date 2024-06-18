@@ -5,6 +5,8 @@ import json
 from tokenizers import Tokenizer
 import hashlib
 from tqdm import tqdm
+import random
+import numpy as np
 
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
@@ -139,26 +141,51 @@ class CLGP_Ebiose_dataset(Dataset):
         """Generate a hash for a given tensor."""
         return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
 
-    def train_validation_test_split(self, train_ratio=0.8, val_ratio=0.1):
+    def train_validation_test_split(self, num_isolated_graphs, num_isolated_prompts, train_ratio=0.8, val_ratio=0.1):
         print("begin split...")
-        train_size = int(train_ratio * len(self))
-        val_size = int(val_ratio * len(self))
-        remaining_size = len(self) - train_size - val_size
         
-        # Perform initial random split to get train, val and remaining sets
-        train_val_indices, test_indices = random_split(range(len(self)), [train_size + val_size, remaining_size])
-        train_indices, val_indices = random_split(train_val_indices, [train_size, val_size])
+        total_pairs = len(self.pairs)
+        all_indices = list(range(total_pairs))
         
-        # Get tokenized prompts for train and validation sets
-        train_prompts = {self.pairs[idx][1].numpy().tobytes() for idx in train_indices}
-        val_prompts = {self.pairs[idx][1].numpy().tobytes() for idx in val_indices}
+        isolated_prompt_indices = random.sample(all_indices, num_isolated_prompts)
+        remaining_indices = list(set(all_indices) - set(isolated_graph_indices))
+        indices_to_transfer = []
         
-        # Combine train and validation prompts
-        seen_prompts = train_prompts.union(val_prompts)
+        for id_x in isolated_prompt_indices:
+            graph_id, prompt_id = self.index_map[id_x]
+            assert len(indices_to_transfer) == len(remaining_indices), "no remaining indices during prompt isolation filter"
+            for id_y in remaining_indices:
+                if graph_id == self.index_map[id_y][0]:
+                    indices_to_transfer.append(id_y)
+                    
+        isolated_prompt_indices = list(set(isolated_prompt_indices) + set(indices_to_transfer))
+        remaining_indices = list(set(remaining_indices)-set(indices_to_transfer))
+
+        # Randomly select indices for isolated graphs
+        isolated_graph_indices = random.sample(isolated_prompt_indices, num_isolated_graphs)
+        indices_to_transfer = []
         
-        # Filter out pairs in test set with tokenized prompts already in train or val set
-        filtered_test_indices = [idx for idx in test_indices if self.pairs[idx][1].numpy().tobytes() not in seen_prompts]
+        for id_x in isolated_graph_indices:
+            graph_id, prompt_id = self.index_map[id_x]
+            assert len(indices_to_transfer) == len(remaining_indices), "no remaining indices during graph isolation filter"
+            for id_y in remaining_indices:
+                if graph_id == self.index_map[id_y][0]:
+                    indices_to_transfer.append(id_y)
+                    
+        test_indices = list(set(isolated_prompt_indices)+set(indices_to_transfer))
+        remaining_indices = list(set(remaining_indices)-set(indices_to_transfer))
         
-        assert len(filtered_test_indices) == 0, "test dataset is empty"
+        print(f"num_isolated_prompts: {num_isolated_prompts}, num_isolated_graphs: {num_isolated_graphs}")
+        print(f"len(test_indices): {len(test_indices)}, len(remaining_indices): {len(remaining_indices)}")
         
-        return Subset(self, train_indices), Subset(self, val_indices), Subset(self, filtered_test_indices)
+        # Compute the number of training and validation samples
+        num_train = int(train_ratio * len(remaining_indices))
+        num_val = int(val_ratio * len(remaining_indices))
+        
+        # Randomly split the remaining indices into training and validation sets
+        random.shuffle(remaining_indices)
+        train_indices = remaining_indices[:num_train]
+        val_indices = remaining_indices[num_train:num_train + num_val]
+        
+        return Subset(self, train_indices), Subset(self, val_indices), Subset(self, test_indices)
+
