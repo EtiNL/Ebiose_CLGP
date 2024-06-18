@@ -24,19 +24,20 @@ def get_embeddings(model, dataloader, device):
             graphs = graphs.to(device)
             texts = texts.to(device)
 
-            graph_features, text_features = model(graphs, texts)
+            graph_embeddings, text_embeddings = model(graphs, texts)
 
             # Unbatch graphs and texts
             graph_data_list = unbatch_graphs(graphs)
             texts_list = torch.split(texts, 1, dim=0)
 
-            for graph_data, graph_feature, text, text_feature in zip(graph_data_list, graph_features, texts_list, text_features):
-                graph_tensor = torch.cat([graph_data.x, graph_data.edge_index], dim=0).cpu()
+            for graph_data, graph_embedding, text, text_embedding in zip(graph_data_list, graph_embeddings, texts_list, text_embeddings):
+                print(graph_embedding.shape, text_embedding.shape)
+                graph_tensor = graph_data.x.cpu()
                 graph_hash = hash_tensor(graph_tensor)
-                text_hash = hash_tensor(text.squeeze(0).cpu())
+                text_hash = hash_tensor(text.cpu())
 
-                graph_embeddings_map[graph_hash] = graph_feature.cpu().numpy()
-                text_embeddings_map[text_hash] = text_feature.cpu().numpy()
+                graph_embeddings_map[graph_hash] = graph_embedding.cpu().numpy()
+                text_embeddings_map[text_hash] = text_embedding.cpu().numpy()
     
     return graph_embeddings_map, text_embeddings_map
 
