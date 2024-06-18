@@ -12,6 +12,7 @@ from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
 from ebiose_clgp.model.CLGP import CLGP
 from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, set_seed
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
+from ebiose_clgp.trainer.evaluation import evaluate_similarity
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 from ebiose_clgp.model.text_encoders.bert import get_Bert
 
@@ -240,7 +241,10 @@ def main():
 
     global_step, avg_loss = train(config, train_dataset, val_dataset, model)
     
-    print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
+    # Evaluate similarity and log histograms
+    train_dataloader = get_dataloader(config, train_dataset, is_train=True)
+    test_dataloader = get_dataloader(config, test_dataset, is_train=False)
+    evaluate_similarity(train_dataloader, test_dataloader, model, train_dataset, config.device)
 
 if __name__ == "__main__":
     main()
