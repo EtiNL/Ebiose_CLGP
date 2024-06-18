@@ -5,6 +5,7 @@ import json
 from tokenizers import Tokenizer
 from torch.utils.data import Subset
 import hashlib
+from tqdm import tqdm
 
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
@@ -39,8 +40,9 @@ class CLGP_Ebiose_dataset(Dataset):
         self.pairs = self.create_pairs()
 
     def create_pairs(self):
+        print("creating pairs...")
         pairs = []
-        for graph, evaluations in self.graph_data:
+        for graph, evaluations in tqdm(self.graph_data):
             for i in range(len(evaluations['evaluations'])):
                 processed_graph = self.process_graph(graph['graph'])
                 node_features_tensor, edge_index = processed_graph
@@ -56,6 +58,7 @@ class CLGP_Ebiose_dataset(Dataset):
 
                 if evaluations['evaluations'][i]:  # Only consider successful evaluations
                     pairs.append((processed_graph, tokenized_prompt))
+        print("end creating pairs")
         return pairs
 
     def tokenize_prompt(self, text):
@@ -136,6 +139,7 @@ class CLGP_Ebiose_dataset(Dataset):
         return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
 
     def train_validation_test_split(self, train_ratio=0.8, val_ratio=0.1):
+        print("begin split...")
         train_size = int(train_ratio * len(self))
         val_size = int(val_ratio * len(self))
         remaining_size = len(self) - train_size - val_size
@@ -153,5 +157,7 @@ class CLGP_Ebiose_dataset(Dataset):
         
         # Filter out pairs in test set with tokenized prompts already in train or val set
         filtered_test_indices = [idx for idx in test_indices if self.pairs[idx][1].numpy().tobytes() not in seen_prompts]
+        
+        assert len(filtered_test_indices) == 0, "test dataset is empty"
         
         return Subset(self, train_indices), Subset(self, val_indices), Subset(self, filtered_test_indices)
