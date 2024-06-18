@@ -31,7 +31,6 @@ def get_embeddings(model, dataloader, device):
             texts_list = torch.split(texts, 1, dim=0)
 
             for graph_data, graph_embedding, text, text_embedding in zip(graph_data_list, graph_embeddings, texts_list, text_embeddings):
-                print(graph_embedding.shape, text_embedding.shape)
                 graph_tensor = graph_data.x.cpu()
                 graph_hash = hash_tensor(graph_tensor)
                 text_hash = hash_tensor(text.cpu())
@@ -41,7 +40,7 @@ def get_embeddings(model, dataloader, device):
     
     return graph_embeddings_map, text_embeddings_map
 
-def evaluate_similarity(train_dataloader, test_dataloader, model, train_dataset, device='cuda'):
+def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, evaluation_map, device='cuda'):
     model = model.to(device)
     
     train_graph_embeddings_map, train_text_embeddings_map = get_embeddings(model, train_dataloader, device)
@@ -54,8 +53,8 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, train_dataset,
     histogram_3 = []
     histogram_4 = []
     
-    for idx, (graph_hash, prompt_hash) in train_dataset.index_map.items():
-        eval_score = train_dataset.evaluation_map[(graph_hash, prompt_hash)]
+    for idx, (graph_hash, prompt_hash) in index_map.items():
+        eval_score = evaluation_map[(graph_hash, prompt_hash)]
         if graph_hash in test_graph_embeddings_map and prompt_hash in test_text_embeddings_map:
             test_graph_embedding = test_graph_embeddings_map[graph_hash]
             test_prompt_embedding = test_text_embeddings_map[prompt_hash]
