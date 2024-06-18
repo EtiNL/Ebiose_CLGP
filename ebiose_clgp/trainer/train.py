@@ -234,6 +234,9 @@ def main():
 
     dataset = CLGP_Ebiose_dataset(config, tokenizer=tokenizer)
     train_dataset, val_dataset, test_dataset = dataset.train_validation_test_split()
+    print(f"test dataset contains {len(test_dataset)} pairs")
+    
+    breakpoint()
 
     global_step, avg_loss = train(config, train_dataset, val_dataset, model)
     

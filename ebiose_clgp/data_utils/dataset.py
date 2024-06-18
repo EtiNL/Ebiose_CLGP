@@ -3,7 +3,7 @@ import torch
 import pickle as pkl
 import json
 from tokenizers import Tokenizer
-from torch_geometric.data import Data
+from torch.utils.data import Subset
 import hashlib
 
 class CLGP_Ebiose_dataset(Dataset):
@@ -137,5 +137,22 @@ class CLGP_Ebiose_dataset(Dataset):
     def train_validation_test_split(self, train_ratio=0.8, val_ratio=0.1):
         train_size = int(train_ratio * len(self))
         val_size = int(val_ratio * len(self))
-        test_size = len(self) - train_size - val_size
-        return random_split(self, [train_size, val_size, test_size])
+        remaining_size = len(self) - train_size - val_size
+        
+        # Perform initial random split to get train, val and remaining sets
+        train_val_indices, test_indices = random_split(range(len(self)), [train_size + val_size, remaining_size])
+        train_indices, val_indices = random_split(train_val_indices, [train_size, val_size])
+        
+        # Get tokenized prompts for train and validation sets
+        train_prompts = {self.pairs[idx][1].numpy().tobytes() for idx in train_indices}
+        val_prompts = {self.pairs[idx][1].numpy().tobytes() for idx in val_indices}
+        
+        # Combine train and validation prompts
+        seen_prompts = train_prompts.union(val_prompts)
+        
+        # Filter out pairs in test set with tokenized prompts already in train or val set
+        filtered_test_indices = [idx for idx in test_indices if self.pairs[idx][1].numpy().tobytes() not in seen_prompts]
+        
+        assert len(filtered_test_indices) == 0, "test dataset is empty"
+        
+        return Subset(self, train_indices), Subset(self, val_indices), Subset(self, filtered_test_indices)
