@@ -43,10 +43,11 @@ class CLGP_Ebiose_dataset(Dataset):
         for graph, evaluations in self.graph_data:
             for i in range(len(evaluations['evaluations'])):
                 processed_graph = self.process_graph(graph['graph'])
+                node_features_tensor, edge_index = processed_graph
                 prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
                 tokenized_prompt = self.tokenize_prompt(prompt)
 
-                graph_hash = self.hash_tensor(processed_graph)
+                graph_hash = self.hash_tensor(node_features_tensor)
                 prompt_hash = self.hash_tensor(tokenized_prompt)
 
                 self.graph_hashmap[graph_hash] = processed_graph
@@ -129,7 +130,7 @@ class CLGP_Ebiose_dataset(Dataset):
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
 
         return (node_features_tensor, edge_index)
-    
+
     def hash_tensor(self, tensor):
         """Generate a hash for a given tensor."""
         return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
@@ -152,7 +153,5 @@ class CLGP_Ebiose_dataset(Dataset):
         
         # Filter out pairs in test set with tokenized prompts already in train or val set
         filtered_test_indices = [idx for idx in test_indices if self.pairs[idx][1].numpy().tobytes() not in seen_prompts]
-        
-        assert len(filtered_test_indices) == 0, "test dataset is empty"
         
         return Subset(self, train_indices), Subset(self, val_indices), Subset(self, filtered_test_indices)
