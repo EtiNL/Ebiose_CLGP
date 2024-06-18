@@ -141,7 +141,7 @@ class CLGP_Ebiose_dataset(Dataset):
         """Generate a hash for a given tensor."""
         return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
 
-    def train_validation_test_split(self, num_isolated_graphs, num_isolated_prompts, train_ratio=0.8, val_ratio=0.1):
+    def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 15, train_ratio=0.8, val_ratio=0.2):
         print("begin split...")
         
         total_pairs = len(self.pairs)
