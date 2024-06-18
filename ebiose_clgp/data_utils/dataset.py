@@ -177,7 +177,6 @@ class CLGP_Ebiose_dataset(Dataset):
         return data['pairs'], data['graph_hashmap'], data['prompt_hashmap'], data['evaluation_map'], data['index_map']
 
     def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 10, train_ratio=0.8, val_ratio=0.2):
-        print("begin split...")
         
         total_pairs = len(self.pairs)
         all_indices = list(range(total_pairs))
