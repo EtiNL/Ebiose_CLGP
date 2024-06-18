@@ -40,7 +40,7 @@ def get_embeddings(model, dataloader, device):
     
     return graph_embeddings_map, text_embeddings_map
 
-def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, evaluation_map, device='cuda'):
+def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, evaluation_map, hist_bins, device='cuda'):
     model = model.to(device)
     
     train_graph_embeddings_map, train_text_embeddings_map = get_embeddings(model, train_dataloader, device)
@@ -61,20 +61,24 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
 
             if graph_hash in train_graph_hashes:
                 if eval_score:
+                    print(1)
                     histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
                 else:
+                    print(2)
                     histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
             else:
                 if eval_score:
+                    print(3)
                     histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
                 else:
+                    print(4)
                     histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
     
     # Log histograms to wandb
-    wandb.log({"known graph association test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_1))})
-    wandb.log({"known graph association test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_2))})
-    wandb.log({"generation metric test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_3))})
-    wandb.log({"generation metric test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_4))})
+    wandb.log({"known graph association test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_1, bins= hist_bins))})
+    wandb.log({"known graph association test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_2, bins= hist_bins))})
+    wandb.log({"generation metric test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_3, bins= hist_bins))})
+    wandb.log({"generation metric test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_4, bins= hist_bins))})
     
     return histogram_1, histogram_2, histogram_3, histogram_4
 

@@ -244,7 +244,7 @@ def main():
     # Evaluate similarity and log histograms
     train_dataloader = get_dataloader(config, train_dataset, is_train=False)
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
-    evaluate_similarity(train_dataloader, test_dataloader, model, dataset.index_map, dataset.evaluation_map, config.device)
+    evaluate_similarity(train_dataloader, test_dataloader, model, dataset.index_map, dataset.evaluation_map, config.eval_hist_bins, config.device)
 
 if __name__ == "__main__":
     main()
