@@ -148,7 +148,7 @@ class CLGP_Ebiose_dataset(Dataset):
         all_indices = list(range(total_pairs))
         
         isolated_prompt_indices = random.sample(all_indices, num_isolated_prompts)
-        remaining_indices = list(set(all_indices) - set(isolated_graph_indices))
+        remaining_indices = list(set(all_indices) - set(isolated_prompt_indices))
         indices_to_transfer = []
         
         for id_x in isolated_prompt_indices:
