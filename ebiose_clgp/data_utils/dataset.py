@@ -7,6 +7,7 @@ import hashlib
 from tqdm import tqdm
 import random
 import numpy as np
+import os
 
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
@@ -26,20 +27,23 @@ class CLGP_Ebiose_dataset(Dataset):
             self.custom_tokenizer = False
             self.tokenizer = tokenizer
 
-        with open(self.config.graph_data_file, 'r') as f:
-            self.graph_data = []
-            for line in f:
-                self.graph_data.append(json.loads(line))
 
-        validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
-        self.prompts_data = validation_set["question"]
+        if os.path.exists(self.config.dataset_file):
+            self.pairs, self.graph_hashmap, self.prompt_hashmap, self.evaluation_map, self.index_map = self.load_pairs_and_maps(self.config.pairs_file)
+        else:
+            with open(self.config.graph_data_file, 'r') as f:
+                self.graph_data = []
+                for line in f:
+                    self.graph_data.append(json.loads(line))
 
-        self.graph_hashmap = {}
-        self.prompt_hashmap = {}
-        self.evaluation_map = {}
-        
-        self.index_map = {}  # Dictionary to map index to (graph_hash, prompt_hash)
-        self.pairs = self.create_pairs()
+            validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
+            self.prompts_data = validation_set["question"]
+            self.graph_hashmap = {}
+            self.prompt_hashmap = {}
+            self.evaluation_map = {}
+            self.index_map = {}
+            self.pairs = self.create_pairs()
+            self.save_pairs_and_maps(self.config.pairs_file)
 
     def create_pairs(self):
         print("creating pairs...")
@@ -74,7 +78,7 @@ class CLGP_Ebiose_dataset(Dataset):
         else:
             tokenized_features = self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
             if tokenized_features.size(0) < max_length:
-                    padded_features = torch.cat((tokenized_features, torch.zeros(max_length - tokenized_features.size(0), dtype=torch.long)))
+                padded_features = torch.cat((tokenized_features, torch.zeros(max_length - tokenized_features.size(0), dtype=torch.long)))
             else:
                 padded_features = tokenized_features[:max_length]
                 
@@ -141,6 +145,24 @@ class CLGP_Ebiose_dataset(Dataset):
         """Generate a hash for a given tensor."""
         return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
 
+    def save_pairs_and_maps(self, file_path):
+        """Save the pairs and related maps to a pickle file."""
+        data = {
+            'pairs': self.pairs,
+            'graph_hashmap': self.graph_hashmap,
+            'prompt_hashmap': self.prompt_hashmap,
+            'evaluation_map': self.evaluation_map,
+            'index_map': self.index_map
+        }
+        with open(file_path, 'wb') as f:
+            pkl.dump(data, f)
+
+    def load_pairs_and_maps(self, file_path):
+        """Load the pairs and related maps from a pickle file."""
+        with open(file_path, 'rb') as f:
+            data = pkl.load(f)
+        return data['pairs'], data['graph_hashmap'], data['prompt_hashmap'], data['evaluation_map'], data['index_map']
+
     def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 15, train_ratio=0.8, val_ratio=0.2):
         print("begin split...")
         
@@ -160,7 +182,7 @@ class CLGP_Ebiose_dataset(Dataset):
                 if prompt_id == self.index_map[id_y][1]:
                     indices_to_transfer.append(id_y)
                     
-        isolated_prompt_indices = list(set(isolated_prompt_indices) + set(indices_to_transfer))
+        isolated_prompt_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
         remaining_indices = list(set(remaining_indices)-set(indices_to_transfer))
 
         # Randomly select indices for isolated graphs
@@ -174,8 +196,8 @@ class CLGP_Ebiose_dataset(Dataset):
                 if graph_id == self.index_map[id_y][0]:
                     indices_to_transfer.append(id_y)
                     
-        test_indices = list(set(isolated_prompt_indices)+set(indices_to_transfer))
-        remaining_indices = list(set(remaining_indices)-set(indices_to_transfer))
+        test_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
+        remaining_indices = list(set(remaining_indices) - set(indices_to_transfer))
         
         print(f"num_isolated_prompts: {num_isolated_prompts}, num_isolated_graphs: {num_isolated_graphs}")
         print(f"len(test_indices): {len(test_indices)}, len(remaining_indices): {len(remaining_indices)}")
@@ -190,4 +212,3 @@ class CLGP_Ebiose_dataset(Dataset):
         val_indices = remaining_indices[num_train:num_train + num_val]
         
         return Subset(self, train_indices), Subset(self, val_indices), Subset(self, test_indices)
-
