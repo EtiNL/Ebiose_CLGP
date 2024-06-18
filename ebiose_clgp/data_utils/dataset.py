@@ -154,8 +154,8 @@ class CLGP_Ebiose_dataset(Dataset):
         
         for id_x in isolated_prompt_indices:
             graph_id, prompt_id = self.index_map[id_x]
-            print(len(indices_to_transfer), len(remaining_indices))
-            assert len(indices_to_transfer) == len(remaining_indices), "no remaining indices during prompt isolation filter"
+            # print(len(indices_to_transfer), len(remaining_indices))
+            assert len(indices_to_transfer) != len(remaining_indices), "no remaining indices during prompt isolation filter"
             for id_y in remaining_indices:
                 if prompt_id == self.index_map[id_y][1]:
                     indices_to_transfer.append(id_y)
@@ -169,7 +169,7 @@ class CLGP_Ebiose_dataset(Dataset):
         
         for id_x in isolated_graph_indices:
             graph_id, prompt_id = self.index_map[id_x]
-            assert len(indices_to_transfer) == len(remaining_indices), "no remaining indices during graph isolation filter"
+            assert len(indices_to_transfer) != len(remaining_indices), "no remaining indices during graph isolation filter"
             for id_y in remaining_indices:
                 if graph_id == self.index_map[id_y][0]:
                     indices_to_transfer.append(id_y)
