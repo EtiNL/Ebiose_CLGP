@@ -35,7 +35,7 @@ class CLGP_Ebiose_dataset(Dataset):
             print('unzipping dataset...')
             with zipfile.ZipFile(dataset_file_path, 'r') as zip_ref:
                 zip_ref.extractall(os.path.dirname(dataset_file_path))
-            dataset_file_path = dataset_file_path.rstrip('.zip')  # Update the path to the unzipped file
+            dataset_file_path = dataset_file_path.rstrip('.zip')+'.pkl' # Update the path to the unzipped file
             print("done")
 
         if os.path.exists(dataset_file_path):
