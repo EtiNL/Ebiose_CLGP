@@ -43,25 +43,46 @@ def calculate_similarity(train_embeddings, test_embeddings):
     similarities = cosine_similarity(test_embeddings, train_embeddings)
     return similarities
 
-def evaluate_similarity(train_dataloader, test_dataloader, model, device='cuda'):
+def evaluate_similarity(train_dataloader, test_dataloader, model, train_dataset, device='cuda'):
     model = model.to(device)
     
     train_graph_embeddings_map, train_text_embeddings_map = get_embeddings(model, train_dataloader, device)
-    
-    # Get graph and prompt embeddings from test dataset
     test_graph_embeddings_map, test_text_embeddings_map = get_embeddings(model, test_dataloader, device)
     
-    # Calculate similarity between test prompt embeddings and train graph embeddings
-    similarity_scores = calculate_similarity(train_graph_embeddings, test_text_embeddings)
+    train_graph_hashes = set(train_graph_embeddings_map.keys())
+    train_text_hashes = set(train_text_embeddings_map.keys())
     
-    return similarity_scores
+    histogram_1 = []
+    histogram_2 = []
+    histogram_3 = []
+    histogram_4 = []
+    
+    for idx, (graph_hash, prompt_hash) in train_dataset.index_map.items():
+        eval_score = train_dataset.evaluation_map[(graph_hash, prompt_hash)]
+        if graph_hash in test_graph_embeddings_map and prompt_hash in test_text_embeddings_map:
+            test_graph_embedding = test_graph_embeddings_map[graph_hash]
+            test_prompt_embedding = test_text_embeddings_map[prompt_hash]
+
+            if graph_hash in train_graph_hashes or prompt_hash in train_text_hashes:
+                if eval_score:
+                    histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                else:
+                    histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+            else:
+                if eval_score:
+                    histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                else:
+                    histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+    
+    return histogram_1, histogram_2, histogram_3, histogram_4
 
 def model_eval(model, train_dataset, eval_dataset, test_dataset):
     
     # Evaluate similarity
-    similarity_scores = evaluate_similarity(train_dataset, test_dataset, model)
+    similarity_scores = evaluate_similarity(train_dataset, test_dataset, model, train_dataset)
     
-    print(similarity_scores)
+    print("Histogram 1: ", similarity_scores[0])
+    print("Histogram 2: ", similarity_scores[1])
+    print("Histogram 3: ", similarity_scores[2])
+    print("Histogram 4: ", similarity_scores[3])
 
-if __name__ == "__main__":
-    main()
