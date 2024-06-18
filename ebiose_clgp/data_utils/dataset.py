@@ -32,13 +32,18 @@ class CLGP_Ebiose_dataset(Dataset):
         # Check if the dataset file is zipped and unzip it
         dataset_file_path = self.config.dataset_file
         if dataset_file_path.endswith('.zip'):
+            print('unzipping dataset...')
             with zipfile.ZipFile(dataset_file_path, 'r') as zip_ref:
                 zip_ref.extractall(os.path.dirname(dataset_file_path))
             dataset_file_path = dataset_file_path.rstrip('.zip')  # Update the path to the unzipped file
+            print("done")
 
         if os.path.exists(dataset_file_path):
+            print("loading dataset...")
             self.pairs, self.graph_hashmap, self.prompt_hashmap, self.evaluation_map, self.index_map = self.load_pairs_and_maps(dataset_file_path)
+            print("done")
         else:
+            print(f"dataset_file_path: {dataset_file_path} doesn't exist")
             with open(self.config.graph_data_file, 'r') as f:
                 self.graph_data = []
                 for line in f:
