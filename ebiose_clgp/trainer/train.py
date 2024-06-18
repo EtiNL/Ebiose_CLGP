@@ -97,7 +97,7 @@ def train(config, train_dataset, val_dataset, model):
         "gradient_accumulation_steps": config.gradient_accumulation_steps
     })
 
-    global_step, global_loss, global_acc = 0, 0.0, 0.0
+    global_step = 0
     model.zero_grad()
 
     scaler = GradScaler()
@@ -167,7 +167,6 @@ def train(config, train_dataset, val_dataset, model):
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
     
-    return global_step, global_loss / global_step
 
 def save_checkpoint(config, epoch, global_step, model, optimizer):
     '''
@@ -235,14 +234,11 @@ def main():
 
     dataset = CLGP_Ebiose_dataset(config, tokenizer=tokenizer)
     train_dataset, val_dataset, test_dataset = dataset.train_validation_test_split()
-    print(f"test dataset contains {len(test_dataset)} pairs")
-    
-    breakpoint()
 
-    global_step, avg_loss = train(config, train_dataset, val_dataset, model)
+    train(config, train_dataset, val_dataset, model)
     
     # Evaluate similarity and log histograms
-    train_dataloader = get_dataloader(config, train_dataset, is_train=True)
+    train_dataloader = get_dataloader(config, train_dataset, is_train=False)
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
     evaluate_similarity(train_dataloader, test_dataloader, model, train_dataset, config.device)
 

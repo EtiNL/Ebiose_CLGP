@@ -8,6 +8,8 @@ from tqdm import tqdm
 import random
 import numpy as np
 import os
+import wandb
+import zipfile
 
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
@@ -27,9 +29,15 @@ class CLGP_Ebiose_dataset(Dataset):
             self.custom_tokenizer = False
             self.tokenizer = tokenizer
 
+        # Check if the dataset file is zipped and unzip it
+        dataset_file_path = self.config.dataset_file
+        if dataset_file_path.endswith('.zip'):
+            with zipfile.ZipFile(dataset_file_path, 'r') as zip_ref:
+                zip_ref.extractall(os.path.dirname(dataset_file_path))
+            dataset_file_path = dataset_file_path.rstrip('.zip')  # Update the path to the unzipped file
 
-        if os.path.exists(self.config.dataset_file):
-            self.pairs, self.graph_hashmap, self.prompt_hashmap, self.evaluation_map, self.index_map = self.load_pairs_and_maps(self.config.pairs_file)
+        if os.path.exists(dataset_file_path):
+            self.pairs, self.graph_hashmap, self.prompt_hashmap, self.evaluation_map, self.index_map = self.load_pairs_and_maps(dataset_file_path)
         else:
             with open(self.config.graph_data_file, 'r') as f:
                 self.graph_data = []
@@ -43,7 +51,7 @@ class CLGP_Ebiose_dataset(Dataset):
             self.evaluation_map = {}
             self.index_map = {}
             self.pairs = self.create_pairs()
-            self.save_pairs_and_maps(self.config.dataset_file)
+            self.save_pairs_and_maps(dataset_file_path)
 
     def create_pairs(self):
         print("creating pairs...")
@@ -163,14 +171,13 @@ class CLGP_Ebiose_dataset(Dataset):
             data = pkl.load(f)
         return data['pairs'], data['graph_hashmap'], data['prompt_hashmap'], data['evaluation_map'], data['index_map']
 
-    def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 15, train_ratio=0.8, val_ratio=0.2):
+    def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 10, train_ratio=0.8, val_ratio=0.2):
         print("begin split...")
         
         total_pairs = len(self.pairs)
         all_indices = list(range(total_pairs))
         
         isolated_prompt_indices = random.sample(all_indices, num_isolated_prompts)
-        print(f"isolated_prompt_indices: {isolated_prompt_indices}")
         remaining_indices = list(set(all_indices) - set(isolated_prompt_indices))
         indices_to_transfer = []
         
@@ -199,8 +206,12 @@ class CLGP_Ebiose_dataset(Dataset):
         test_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
         remaining_indices = list(set(remaining_indices) - set(indices_to_transfer))
         
-        print(f"num_isolated_prompts: {num_isolated_prompts}, num_isolated_graphs: {num_isolated_graphs}")
-        print(f"len(test_indices): {len(test_indices)}, len(remaining_indices): {len(remaining_indices)}")
+        wandb.config["num_isolated_prompts"] = num_isolated_prompts
+        wandb.config["num_isolated_graphs"] = num_isolated_graphs
+        wandb.config["len(test_indices)"] = len(test_indices)
+        wandb.config["len(remaining_indices)"] = len(remaining_indices)
+        # print(f"num_isolated_prompts: {num_isolated_prompts}, num_isolated_graphs: {num_isolated_graphs}")
+        # print(f"len(test_indices): {len(test_indices)}, len(remaining_indices): {len(remaining_indices)})
         
         # Compute the number of training and validation samples
         num_train = int(train_ratio * len(remaining_indices))
