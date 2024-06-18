@@ -43,7 +43,7 @@ class CLGP_Ebiose_dataset(Dataset):
             self.evaluation_map = {}
             self.index_map = {}
             self.pairs = self.create_pairs()
-            self.save_pairs_and_maps(self.config.pairs_file)
+            self.save_pairs_and_maps(self.config.dataset_file)
 
     def create_pairs(self):
         print("creating pairs...")
