@@ -15,6 +15,7 @@ from ebiose_clgp.trainer.utils import mkdir, load_config_file
 from ebiose_clgp.trainer.evaluation import evaluate_similarity
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 from ebiose_clgp.model.text_encoders.bert import get_Bert
+from ebiose_clgp.trainer.loss import ContrastiveLoss
 
 from torch.optim import AdamW
 
@@ -32,6 +33,7 @@ def log_gradients(model, step):
 def evaluate(config, model, validation_dataloader):
     model.eval()
     total_loss = 0.0
+    criterion = ContrastiveLoss(margin=1.0)  # Define the contrastive loss criterion
     with torch.no_grad():
         for step, batch in enumerate(validation_dataloader):
             input_graphs, input_texts = batch
@@ -43,22 +45,12 @@ def evaluate(config, model, validation_dataloader):
 
             graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+            labels = torch.arange(len(graph_features)).to(graph_features.device)
             
-            if config.n_gpu <= 1:
-                logit_scale = model.logit_scale.exp()
-            elif config.n_gpu > 1:
-                logit_scale = model.module.logit_scale.exp()
-
-            logits_per_graph = logit_scale * graph_features @ text_features.t()
-            logits_per_text = logit_scale * text_features @ graph_features.t()
-
-            labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
-
-            graph_loss = F.cross_entropy(logits_per_graph, labels)
-            text_loss = F.cross_entropy(logits_per_text, labels)
-
-            loss = (graph_loss + text_loss) / 2
-
+            # Calculate the contrastive loss
+            loss = criterion(graph_features, text_features, labels)
+            
             if config.n_gpu > 1: 
                 loss = loss.mean()
 
@@ -101,10 +93,10 @@ def train(config, train_dataset, val_dataset, model):
     model.zero_grad()
 
     scaler = GradScaler()
+    criterion = ContrastiveLoss(margin=1.0)  # Define the contrastive loss criterion
     
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in tqdm(enumerate(train_dataloader)):
-            # torch.cuda.empty_cache()  # Clear the cache
             with autocast():
                 input_graphs, input_texts = batch
 
@@ -115,21 +107,11 @@ def train(config, train_dataset, val_dataset, model):
 
                 graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
                 text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-                
-                if config.n_gpu <= 1:
-                    logit_scale = model.logit_scale.exp()
-                elif config.n_gpu > 1:
-                    logit_scale = model.module.logit_scale.exp()
 
-                logits_per_graph = logit_scale * graph_features @ text_features.t()
-                logits_per_text = logit_scale * text_features @ graph_features.t()
+                labels = torch.arange(len(graph_features)).to(graph_features.device)
 
-                labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
-
-                graph_loss = F.cross_entropy(logits_per_graph, labels)
-                text_loss = F.cross_entropy(logits_per_text, labels)
-
-                loss = (graph_loss + text_loss) / 2
+                # Calculate the contrastive loss
+                loss = criterion(graph_features, text_features, labels)
 
                 if config.n_gpu > 1: 
                     loss = loss.mean()
@@ -158,7 +140,6 @@ def train(config, train_dataset, val_dataset, model):
 
                 if global_step % config.logging_steps == 0:
                     wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]}, step=global_step)
-                    # log_gradients(model, global_step)
 
                 if global_step % config.eval_steps == 0:
                     val_loss = evaluate(config, model, val_dataloader)
@@ -166,6 +147,7 @@ def train(config, train_dataset, val_dataset, model):
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
+
     
 
 def save_checkpoint(config, epoch, global_step, model, optimizer):
