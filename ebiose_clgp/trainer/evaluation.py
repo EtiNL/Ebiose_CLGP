@@ -49,6 +49,7 @@ def get_embeddings(model, dataloader, device):
 
             for graph_data, graph_embedding, text, text_embedding in zip(graph_data_list, graph_embeddings, texts_list, text_embeddings):
                 graph_tensor = graph_data.x.cpu()
+                print(graph_tensor.shape)
                 graph_hash = hash_tensor(graph_tensor)
                 text_hash = hash_tensor(text.cpu())
 
