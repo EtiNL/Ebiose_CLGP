@@ -9,7 +9,7 @@ model_save_name: 'CLGP_V1.pth'
 saved_checkpoints: 'Model_checkpoints'
 save_steps: 100
 eval_hist_bins: 30
-embbeddings_saving_path: 'Ebiose_CLGP/ebiose_clgp/data/embeddings.pkl'
+embbeddings_saving_path: 'Embeddings'
 
 optimizer:
   lr: 0.00001
