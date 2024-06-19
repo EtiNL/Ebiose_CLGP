@@ -40,12 +40,13 @@ def get_embeddings(model, dataloader, device):
             input_graphs, texts = batch
             input_graphs = input_graphs.to(device)
             texts = texts.to(device)
+            # Unbatch graphs and texts
+            graph_data_list = unbatch_graphs(input_graphs)
+            print(graph_data_list[0].x.shape)
 
             graph_embeddings, text_embeddings = model(input_graphs, texts)
 
             # Unbatch graphs and texts
-            graph_data_list = unbatch_graphs(input_graphs)
-            print(graph_data_list[0].x.shape)
             texts_list = torch.split(texts, 1, dim=0)
 
             for graph_data, graph_embedding, text, text_embedding in zip(graph_data_list, graph_embeddings, texts_list, text_embeddings):
