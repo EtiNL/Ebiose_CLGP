@@ -96,17 +96,17 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
                     histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
                     
     print(f"evaluated pairs: {counter}")
-    
-    histogram_1 = np.array(histogram_1)
-    histogram_2 = np.array(histogram_2)
-    histogram_3 = np.array(histogram_3)
-    histogram_4 = np.array(histogram_4)
 
-    # Log histograms to wandb
-    wandb.log({"known graph association test, if eval = true": wandb.Histogram(histogram_1),
-               "known graph association test, if eval = false": wandb.Histogram(histogram_2),
-               "generation metric test, if eval = true": wandb.Histogram(histogram_3),
-               "generation metric test, if eval = false": wandb.Histogram(histogram_4)}, commit=False)
+    # Log histograms to wandb using wandb.Table and wandb.plot.histogram
+    def log_histogram(data, title):
+        table = wandb.Table(data=[[x] for x in data], columns=["value"])
+        histogram = wandb.plot.histogram(table, value='value', title=title)
+        wandb.log({title: histogram})
+
+    log_histogram(histogram_1, "Known graph association test, eval=true")
+    log_histogram(histogram_2, "Known graph association test, eval=false")
+    log_histogram(histogram_3, "Generation metric test, eval=true")
+    log_histogram(histogram_4, "Generation metric test, eval=false")
 
     return histogram_1, histogram_2, histogram_3, histogram_4
 
