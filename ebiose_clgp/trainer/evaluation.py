@@ -6,6 +6,7 @@ import hashlib
 import wandb
 import os
 import pickle
+import zipfile
 
 def hash_tensor(tensor):
     """Generate a hash for a given tensor."""
@@ -20,6 +21,12 @@ def save_embeddings_map(path, embedding_maps):
         pickle.dump(embedding_maps, f)
 
 def load_embeddings_map(path):
+    if path.endswith('.zip'):
+        print('unzipping dataset...')
+        with zipfile.ZipFile(path, 'r') as zip_ref:
+            zip_ref.extractall(os.path.dirname(path))
+        path = path.rstrip('.zip')+'.pkl' # Update the path to the unzipped file
+        print("done")
     with open(path, 'rb') as f:
         return pickle.load(f)
 
@@ -74,26 +81,27 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
     print(len(train_graph_hashes), len(test_graph_hashes))
 
     for (graph_hash, prompt_hash) in index_map.values():
-        print(graph_hash in test_graph_hashes or graph_hash in train_graph_hashes or prompt_hash in test_prompt_hashes)
-        # eval_score = evaluation_map[(graph_hash, prompt_hash)]
-        # if graph_hash in test_graph_embeddings_map.keys() and prompt_hash in test_text_embeddings_map.keys():
-        #     test_graph_embedding = test_graph_embeddings_map[graph_hash]
-        #     test_prompt_embedding = test_text_embeddings_map[prompt_hash]
+        # print(graph_hash in test_graph_hashes or graph_hash in train_graph_hashes or prompt_hash in test_prompt_hashes)
+        eval_score = evaluation_map[(graph_hash, prompt_hash)]
+        if graph_hash in test_graph_hashes and prompt_hash in test_prompt_hashes:
+            print(True)
+            test_graph_embedding = test_graph_embeddings_map[graph_hash]
+            test_prompt_embedding = test_text_embeddings_map[prompt_hash]
 
-        #     if graph_hash in train_graph_hashes:
-        #         if eval_score:
-        #             print(1)
-        #             histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
-        #         else:
-        #             print(2)
-        #             histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
-        #     else:
-        #         if eval_score:
-        #             print(3)
-        #             histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
-        #         else:
-        #             print(4)
-        #             histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+            if graph_hash in train_graph_hashes:
+                if eval_score:
+                    print(1)
+                    histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                else:
+                    print(2)
+                    histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+            else:
+                if eval_score:
+                    print(3)
+                    histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                else:
+                    print(4)
+                    histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
 
     breakpoint()
     # Log histograms to wandb
