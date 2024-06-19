@@ -3,7 +3,7 @@ per_gpu_eval_batch_size: 128
 logging_steps: 50
 eval_steps: 50
 gradient_accumulation_steps: 8
-num_train_epochs: 5
+num_train_epochs: 30
 train_batch_size: 32
 model_save_name: 'CLGP_V1.pth'
 saved_checkpoints: 'Model_checkpoints'
