@@ -65,8 +65,6 @@ class CLGP_Ebiose_dataset(Dataset):
             for i in range(len(evaluations['evaluations'])):
                 processed_graph = self.process_graph(graph['graph'])
                 node_features_tensor, edge_index = processed_graph
-                print(node_features_tensor.shape)
-                breakpoint()
                 prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
                 tokenized_prompt = self.tokenize_prompt(prompt)
 
