@@ -76,13 +76,14 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
     histogram_3 = []
     histogram_4 = []
     
+    counter = 0
 
     for (graph_hash, prompt_hash) in index_map.values():
         eval_score = evaluation_map[(graph_hash, prompt_hash)]
         if graph_hash in test_graph_embeddings_map and prompt_hash in test_text_embeddings_map:
             test_graph_embedding = test_graph_embeddings_map[graph_hash]
             test_prompt_embedding = test_text_embeddings_map[prompt_hash]
-
+            counter += 1
             if graph_hash in train_graph_embeddings_map:
                 if eval_score:
                     histogram_1.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
@@ -93,6 +94,8 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
                     histogram_3.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
                 else:
                     histogram_4.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
+                    
+    print(f"evaluated pairs: {counter}")
     
     histogram_1 = wandb.Table(data=histogram_1, columns=['similarity'])
     histogram_2 = wandb.Table(data=histogram_2, columns=['similarity'])
@@ -166,3 +169,4 @@ if __name__ == "__main__":
     train_dataloader = get_dataloader(config, train_dataset, is_train=False)
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
     evaluate_similarity(train_dataloader, test_dataloader, model, dataset.index_map, dataset.evaluation_map, config.eval_hist_bins, config.device, config.embbeddings_saving_path)
+    print("done")
