@@ -94,10 +94,10 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
                 else:
                     histogram_4.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
     
-    histogram_1 = wandb.Table(data=histogram_1, columns='similarity')
-    histogram_2 = wandb.Table(data=histogram_2, columns='similarity')
-    histogram_3 = wandb.Table(data=histogram_3, columns='similarity')
-    histogram_4 = wandb.Table(data=histogram_4, columns='similarity')
+    histogram_1 = wandb.Table(data=histogram_1, columns=['similarity'])
+    histogram_2 = wandb.Table(data=histogram_2, columns=['similarity'])
+    histogram_3 = wandb.Table(data=histogram_3, columns=['similarity'])
+    histogram_4 = wandb.Table(data=histogram_4, columns=['similarity'])
 
     # Log histograms to wandb
     wandb.log({"known graph association test, if eval = true": wandb.plot.histogram(histogram_1, "cosine similarity", title="Scores"),
