@@ -38,6 +38,7 @@ def get_embeddings(model, dataloader, device):
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Generating embeddings"):
             input_graphs, texts = batch
+            print(input_graphs.shape)
             input_graphs = input_graphs.to(device)
             texts = texts.to(device)
 
