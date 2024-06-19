@@ -81,10 +81,10 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
     print(len(train_graph_hashes), len(test_graph_hashes))
 
     for (graph_hash, prompt_hash) in index_map.values():
-        # print(graph_hash in test_graph_hashes or graph_hash in train_graph_hashes or prompt_hash in test_prompt_hashes)
+        print(graph_hash in test_graph_hashes or graph_hash in train_graph_hashes or prompt_hash in test_prompt_hashes)
         eval_score = evaluation_map[(graph_hash, prompt_hash)]
         if graph_hash in test_graph_hashes and prompt_hash in test_prompt_hashes:
-            print(eval_score)
+            breakpoint()
             test_graph_embedding = test_graph_embeddings_map[graph_hash]
             test_prompt_embedding = test_text_embeddings_map[prompt_hash]
 
