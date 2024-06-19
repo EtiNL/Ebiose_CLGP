@@ -6,3 +6,4 @@ wandb/*
 path_to_checkpoints/*
 Ebiose_CLGP.egg-info/*
 ebiose_clgp/data/graph_question_links_3d.html
+ebiose_clgp/data/embeddings.zip
