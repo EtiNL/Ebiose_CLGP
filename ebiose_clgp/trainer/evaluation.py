@@ -82,7 +82,7 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
 
     for (graph_hash, prompt_hash) in index_map.values():
         if graph_hash in test_graph_hashes or graph_hash in train_graph_hashes:
-            print(graph_hash in test_graph_hashes or graph_hash in train_graph_hashes) # or prompt_hash in test_prompt_hashes
+            print(prompt_hash in test_prompt_hashes) # or graph_hash in test_graph_hashes or graph_hash in train_graph_hashes
         eval_score = evaluation_map[(graph_hash, prompt_hash)]
         if graph_hash in test_graph_hashes and prompt_hash in test_prompt_hashes:
             print('ok')
