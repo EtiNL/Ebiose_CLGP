@@ -74,10 +74,10 @@ class CLGP_Ebiose_dataset(Dataset):
                 self.graph_hashmap[graph_hash] = processed_graph
                 self.prompt_hashmap[prompt_hash] = tokenized_prompt
                 self.evaluation_map[(graph_hash, prompt_hash)] = evaluations['evaluations'][i]
-
-                if evaluations['evaluations'][i]:  # Only consider successful evaluations
-                    pairs.append((processed_graph, tokenized_prompt))
-                    self.index_map[len(pairs) - 1] = (graph_hash, prompt_hash)
+                
+                pairs.append((processed_graph, tokenized_prompt))
+                self.index_map[len(pairs) - 1] = (graph_hash, prompt_hash, evaluations['evaluations'][i])
+                
         print("end creating pairs")
         return pairs
 

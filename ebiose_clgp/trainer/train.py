@@ -36,7 +36,7 @@ def evaluate(config, model, validation_dataloader):
     criterion = ContrastiveLoss(margin=1.0)  # Define the contrastive loss criterion
     with torch.no_grad():
         for step, batch in enumerate(validation_dataloader):
-            input_graphs, input_texts = batch
+            input_graphs, input_texts, labels = batch
 
             input_graphs = input_graphs.to(torch.device(config.device))
             input_texts = input_texts.to(torch.device(config.device))
@@ -45,8 +45,6 @@ def evaluate(config, model, validation_dataloader):
 
             graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-
-            labels = torch.arange(len(graph_features)).to(graph_features.device)
             
             # Calculate the contrastive loss
             loss = criterion(graph_features, text_features, labels)
@@ -98,7 +96,7 @@ def train(config, train_dataset, val_dataset, model):
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in tqdm(enumerate(train_dataloader)):
             with autocast():
-                input_graphs, input_texts = batch
+                input_graphs, input_texts, labels = batch
 
                 input_graphs = input_graphs.to(torch.device(config.device))
                 input_texts = input_texts.to(torch.device(config.device))
@@ -107,8 +105,6 @@ def train(config, train_dataset, val_dataset, model):
 
                 graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
                 text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-
-                labels = torch.arange(len(graph_features)).to(graph_features.device)
 
                 # Calculate the contrastive loss
                 loss = criterion(graph_features, text_features, labels)

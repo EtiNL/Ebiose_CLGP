@@ -16,7 +16,7 @@ def pad_graphs(graphs):
     return padded_graphs
 
 def collate_graph(batch):
-    graphs, texts = zip(*batch)
+    graphs, texts, labels = zip(*batch)
     
     # Combine node features and edge indices into a single batch
     graph_list = []
@@ -32,5 +32,6 @@ def collate_graph(batch):
     
     # Stack text inputs
     texts = torch.stack(texts)
+    labels = torch.stack(labels)
     
-    return combined_graph, texts
+    return combined_graph, texts, labels
