@@ -42,7 +42,6 @@ def get_embeddings(model, dataloader, device):
             texts = texts.to(device)
             # Unbatch graphs and texts
             graph_data_list = unbatch_graphs(input_graphs)
-            print(graph_data_list[0].x.shape)
 
             graph_embeddings, text_embeddings = model(input_graphs, texts)
 
@@ -51,8 +50,6 @@ def get_embeddings(model, dataloader, device):
 
             for graph_data, graph_embedding, text, text_embedding in zip(graph_data_list, graph_embeddings, texts_list, text_embeddings):
                 graph_tensor = graph_data.x.cpu()
-                print(graph_tensor.shape)
-                breakpoint()
                 graph_hash = hash_tensor(graph_tensor)
                 text_hash = hash_tensor(text.cpu())
 
