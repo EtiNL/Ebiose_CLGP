@@ -226,4 +226,8 @@ class CLGP_Ebiose_dataset(Dataset):
         train_indices = remaining_indices[:num_train]
         val_indices = remaining_indices[num_train:num_train + num_val]
         
+        self.train_indices = train_indices
+        self.val_indices = val_indices
+        self.test_indices = test_indices
+        
         return Subset(self, train_indices), Subset(self, val_indices), Subset(self, test_indices)
