@@ -87,6 +87,7 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
                 if eval_score:
                     histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
                 else:
+                    print(2)
                     histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
             else:
                 print('ok')
