@@ -85,22 +85,25 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
 
             if graph_hash in train_graph_embeddings_map:
                 if eval_score:
-                    histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                    histogram_1.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
                 else:
-                    print(2)
-                    histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                    histogram_2.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
             else:
-                print('ok')
                 if eval_score:
-                    histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                    histogram_3.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
                 else:
-                    histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                    histogram_4.append([cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0]])
+    
+    histogram_1 = wandb.Table(data=histogram_1, columns='similarity')
+    histogram_2 = wandb.Table(data=histogram_2, columns='similarity')
+    histogram_3 = wandb.Table(data=histogram_3, columns='similarity')
+    histogram_4 = wandb.Table(data=histogram_4, columns='similarity')
 
     # Log histograms to wandb
-    wandb.log({"known graph association test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_1, bins=hist_bins))})
-    wandb.log({"known graph association test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_2, bins=hist_bins))})
-    wandb.log({"generation metric test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_3, bins=hist_bins))})
-    wandb.log({"generation metric test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_4, bins=hist_bins))})
+    wandb.log({"known graph association test, if eval = true": wandb.plot.histogram(histogram_1, "cosine similarity", title="Scores"),
+               "known graph association test, if eval = false": wandb.plot.histogram(histogram_2, "cosine similarity", title="Scores"),
+               "generation metric test, if eval = true": wandb.plot.histogram(histogram_3, "cosine similarity", title="Scores"),
+               "generation metric test, if eval = false": wandb.plot.histogram(histogram_4, "cosine similarity", title="Scores")})
 
     return histogram_1, histogram_2, histogram_3, histogram_4
 
