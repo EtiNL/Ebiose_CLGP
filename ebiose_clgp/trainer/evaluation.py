@@ -85,17 +85,14 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
 
             if graph_hash in train_graph_embeddings_map:
                 if eval_score:
-                    print(1)
                     histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
                 else:
-                    print(2)
                     histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
             else:
+                print('ok')
                 if eval_score:
-                    print(3)
                     histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
                 else:
-                    print(4)
                     histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
 
     # Log histograms to wandb
