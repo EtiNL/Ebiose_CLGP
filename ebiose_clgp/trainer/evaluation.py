@@ -70,24 +70,20 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
         if saving_path:
             save_embeddings_map(saving_path, (train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map))
     
-    train_graph_hashes = set(train_graph_embeddings_map.keys())
-    test_graph_hashes = set(train_graph_embeddings_map.keys())
-    test_prompt_hashes = set(test_text_embeddings_map.keys())
 
     histogram_1 = []
     histogram_2 = []
     histogram_3 = []
     histogram_4 = []
     
-    print(len(train_graph_hashes), len(test_graph_hashes))
 
     for (graph_hash, prompt_hash) in index_map.values():
         eval_score = evaluation_map[(graph_hash, prompt_hash)]
-        if graph_hash in test_graph_hashes and prompt_hash in test_prompt_hashes:
+        if graph_hash in test_graph_embeddings_map and prompt_hash in test_text_embeddings_map:
             test_graph_embedding = test_graph_embeddings_map[graph_hash]
             test_prompt_embedding = test_text_embeddings_map[prompt_hash]
 
-            if graph_hash in train_graph_hashes:
+            if graph_hash in train_graph_embeddings_map:
                 if eval_score:
                     print(1)
                     histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
