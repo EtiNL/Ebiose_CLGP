@@ -61,14 +61,14 @@ def get_embeddings(model, dataloader, device):
 def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, evaluation_map, hist_bins, device='cuda', saving_path=None):
     model = model.to(device)
     
-    if saving_path and os.path.exists(saving_path):
-        train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map = load_embeddings_map(saving_path)
-    else:
-        train_graph_embeddings_map, train_text_embeddings_map = get_embeddings(model, train_dataloader, device)
-        test_graph_embeddings_map, test_text_embeddings_map = get_embeddings(model, test_dataloader, device)
-        
-        if saving_path:
-            save_embeddings_map(saving_path, (train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map))
+    # if saving_path and os.path.exists(saving_path):
+    #     train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map = load_embeddings_map(saving_path)
+    # else:
+    train_graph_embeddings_map, train_text_embeddings_map = get_embeddings(model, train_dataloader, device)
+    test_graph_embeddings_map, test_text_embeddings_map = get_embeddings(model, test_dataloader, device)
+    
+    if saving_path:
+        save_embeddings_map(saving_path, (train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map))
     
 
     histogram_1 = []
