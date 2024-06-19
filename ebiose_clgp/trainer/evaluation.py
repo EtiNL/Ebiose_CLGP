@@ -82,12 +82,8 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
     print(len(train_graph_hashes), len(test_graph_hashes))
 
     for (graph_hash, prompt_hash) in index_map.values():
-        if prompt_hash in test_prompt_hashes:
-            print(prompt_hash in test_prompt_hashes) # or graph_hash in test_graph_hashes or graph_hash in train_graph_hashes
         eval_score = evaluation_map[(graph_hash, prompt_hash)]
         if graph_hash in test_graph_hashes and prompt_hash in test_prompt_hashes:
-            print('ok')
-            breakpoint()
             test_graph_embedding = test_graph_embeddings_map[graph_hash]
             test_prompt_embedding = test_text_embeddings_map[prompt_hash]
 
@@ -106,7 +102,6 @@ def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, eva
                     print(4)
                     histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
 
-    breakpoint()
     # Log histograms to wandb
     wandb.log({"known graph association test, if eval = true": wandb.Histogram(np_histogram=np.histogram(histogram_1, bins=hist_bins))})
     wandb.log({"known graph association test, if eval = false": wandb.Histogram(np_histogram=np.histogram(histogram_2, bins=hist_bins))})
