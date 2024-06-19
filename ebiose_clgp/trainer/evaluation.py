@@ -15,9 +15,9 @@ def unbatch_graphs(batch):
     data_list = batch.to_data_list()
     return data_list
 
-def save_embeddings_map(path, graph_embeddings_map, text_embeddings_map):
+def save_embeddings_map(path, embedding_maps):
     with open(path, 'wb') as f:
-        pickle.dump((graph_embeddings_map, text_embeddings_map), f)
+        pickle.dump(embedding_maps, f)
 
 def load_embeddings_map(path):
     with open(path, 'rb') as f:
