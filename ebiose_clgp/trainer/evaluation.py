@@ -25,7 +25,7 @@ def load_embeddings(path):
 # Log histograms to wandb using wandb.Table and wandb.plot.histogram
 def log_histogram(data, title):
     table = wandb.Table(data=[[x] for x in data], columns=["value"])
-    histogram = wandb.plot.histogram(table, value='cosine similarity', title=title)
+    histogram = wandb.plot.histogram(table, value='value', title=title)
     wandb.log({title: histogram})  
 
 
