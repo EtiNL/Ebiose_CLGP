@@ -53,19 +53,19 @@ def evaluate_similarity(config, test_dataset, model, title):
             # graph_data_list = unbatch_graphs(input_graphs)
 
             graph_embeddings, text_embeddings = model(input_graphs, texts)
+            
+            similarities = F.cosine_similarity(graph_embeddings, text_embeddings)
 
-            for graph_embedding, text_embedding, label in zip(graph_embeddings, text_embeddings, labels):
+            for graph_embedding, text_embedding, label, similarity in zip(graph_embeddings, text_embeddings, labels, similarities):
                 if label == 1:
-                    hist_true.append(F.cosine_similarity(graph_embedding.unsqueeze(0), text_embedding.unsqueeze(0)))
+                    hist_true.append(similarity)
                 elif label == 0:
-                    hist_false.append(F.cosine_similarity(graph_embedding.unsqueeze(0), text_embedding.unsqueeze(0)))
+                    hist_false.append(similarity)
                 else:
                     try:
                         print(f"label shape: {label.shape}")
                     except:
                         raise Exception(f'type label: {type(label)}, instead of int or array_like')  
-    
-    assert graph_embedding.shape == torch.Size([config.embed_dim]) and text_embedding.shape == torch.Size([config.embed_dim]), f"graph_embedding.shape: {graph_embedding.shape},  text_embedding.shape: {text_embedding.shape}"
 
     log_histogram(hist_true, f"{title}, evaluation = 1")
     log_histogram(hist_false, f"{title}, evaluation = 0")
