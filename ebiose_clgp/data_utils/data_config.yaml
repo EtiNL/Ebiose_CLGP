@@ -3,6 +3,6 @@ gsm8k_validation_file: 'Ebiose_CLGP/ebiose_clgp/data/gsm8k-validation.pkl'
 dataset_file: 'Ebiose_CLGP/ebiose_clgp/data/test_data.pkl'
 prompt_tokenizer: 'Ebiose_CLGP/ebiose_clgp/data_utils/prompt_tokenizer_1.json'
 graph_feature_tokenizer: 'Ebiose_CLGP/ebiose_clgp/data_utils/graph_tokenizer_1.json'
-prompt_context_length: 100
+prompt_context_length: 150
 node_feature_context_length: 100
 num_workers: 4
