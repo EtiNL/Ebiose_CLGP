@@ -221,9 +221,9 @@ def main():
     print("done")
     
     print("model evaluation...")
-    evaluate_similarity(test_dataset_cat_1, model, config.eval_hist_bins, 'test prompt & trainned graph' ,config.device, config.embbeddings_saving_path)
-    evaluate_similarity(test_dataset_cat_2, model, config.eval_hist_bins, 'trainned prompt & test graph' ,config.device, config.embbeddings_saving_path)
-    evaluate_similarity(test_dataset_cat_3, model, config.eval_hist_bins, 'test prompt & test graph' ,config.device, config.embbeddings_saving_path)
+    evaluate_similarity(config, test_dataset_cat_1, model, config.eval_hist_bins, 'test prompt & trainned graph' ,config.device, config.embbeddings_saving_path)
+    evaluate_similarity(config, test_dataset_cat_2, model, config.eval_hist_bins, 'trainned prompt & test graph' ,config.device, config.embbeddings_saving_path)
+    evaluate_similarity(config, test_dataset_cat_3, model, config.eval_hist_bins, 'test prompt & test graph' ,config.device, config.embbeddings_saving_path)
     print("done")
     wandb.finish()
 

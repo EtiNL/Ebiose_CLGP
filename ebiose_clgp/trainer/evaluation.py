@@ -27,7 +27,7 @@ def load_embeddings_map(path):
         return pickle.load(f)
 
 
-def evaluate_similarity(test_dataset, model, hist_bins, title, device='cuda', saving_path=None):
+def evaluate_similarity(config, test_dataset, model, hist_bins, title, device='cuda', saving_path=None):
     
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
     
@@ -126,6 +126,6 @@ if __name__ == "__main__":
     print("model evaluation...")
     # Evaluate similarity and log histograms
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
-    evaluate_similarity(test_dataloader, model, config.eval_hist_bins, config.device, config.embbeddings_saving_path)
+    evaluate_similarity(config, test_dataloader, model, config.eval_hist_bins, config.device, config.embbeddings_saving_path)
     print("done")
     wandb.finish()
