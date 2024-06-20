@@ -8,15 +8,11 @@ import pickle
 import zipfile
 from ebiose_clgp.data_utils.dataloader import get_dataloader
 
-def unbatch_graphs(batch):
-    data_list = batch.to_data_list()
-    return data_list
-
-def save_embeddings_map(path, embedding_maps):
+def save_embeddings(path, embedding_maps):
     with open(path, 'wb') as f:
         pickle.dump(embedding_maps, f)
 
-def load_embeddings_map(path):
+def load_embeddings(path):
     if path.endswith('.zip'):
         print('unzipping dataset...')
         with zipfile.ZipFile(path, 'r') as zip_ref:
@@ -26,8 +22,18 @@ def load_embeddings_map(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
 
+# Log histograms to wandb using wandb.Table and wandb.plot.histogram
+def log_histogram(data, title):
+    table = wandb.Table(data=[[x] for x in data], columns=["value"])
+    histogram = wandb.plot.histogram(table, value='cosine similarity', title=title)
+    wandb.log({title: histogram})  
 
-def evaluate_similarity(config, test_dataset, model, hist_bins, title, device='cuda', saving_path=None):
+
+def evaluate_similarity(config, test_dataset, model, title):
+    
+    device = config.device
+    saving_path = config.embbeddings_saving_path
+    hist_bins = config.config.eval_hist_bins
     
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
     
@@ -56,20 +62,13 @@ def evaluate_similarity(config, test_dataset, model, hist_bins, title, device='c
                     try:
                         print(f"label shape: {label.shape}")
                     except:
-                        raise Exception(f'type label: {type(label)}, instead of bool')
-                    
-                    
-
-    # Log histograms to wandb using wandb.Table and wandb.plot.histogram
-    def log_histogram(data, title):
-        table = wandb.Table(data=[[x] for x in data], columns=["value"])
-        histogram = wandb.plot.histogram(table, value='cosine similarity', title=title)
-        wandb.log({title: histogram})    
+                        raise Exception(f'type label: {type(label)}, instead of int or array_like')  
 
     log_histogram(hist_true, f"{title}, evaluation = 1")
     log_histogram(hist_false, f"{title}, evaluation = 0")
 
 if __name__ == "__main__":
+    # needs to be updated
     from ebiose_clgp.trainer.utils import mkdir, load_config_file
     from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
     from omegaconf import OmegaConf
@@ -126,6 +125,6 @@ if __name__ == "__main__":
     print("model evaluation...")
     # Evaluate similarity and log histograms
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
-    evaluate_similarity(config, test_dataloader, model, config.eval_hist_bins, config.device, config.embbeddings_saving_path)
+    evaluate_similarity(config, test_dataloader, model)
     print("done")
     wandb.finish()
