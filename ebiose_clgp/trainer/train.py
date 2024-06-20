@@ -70,7 +70,7 @@ def train(config, train_dataset, val_dataset, model):
     optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
 
     # Warmup iterations = 20% of total iterations
-    num_warmup_steps = int(0.20 * t_total)
+    num_warmup_steps = 0 #int(0.05 * t_total)
     scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=t_total)
 
     if config.n_gpu > 1:
