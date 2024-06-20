@@ -216,7 +216,7 @@ def main():
     train_dataset, val_dataset, test_dataset_cat_1, test_dataset_cat_2, test_dataset_cat_3 = dataset.train_validation_test_split()
 
     print("training...")
-    # train(config, train_dataset, val_dataset, model)
+    train(config, train_dataset, val_dataset, model)
     torch.cuda.empty_cache()
     print("done")
     
