@@ -40,6 +40,7 @@ def evaluate(config, model, validation_dataloader):
 
             input_graphs = input_graphs.to(torch.device(config.device))
             input_texts = input_texts.to(torch.device(config.device))
+            labels = labels.to(torch.device(config.device))
             
             graph_features, text_features = model(input_graphs, input_texts)
 
