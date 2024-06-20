@@ -6,6 +6,7 @@ import wandb
 import os
 import pickle
 import zipfile
+from ebiose_clgp.data_utils.dataloader import get_dataloader
 
 def unbatch_graphs(batch):
     data_list = batch.to_data_list()
