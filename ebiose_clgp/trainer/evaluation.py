@@ -2,15 +2,10 @@ import torch
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
-import hashlib
 import wandb
 import os
 import pickle
 import zipfile
-
-def hash_tensor(tensor):
-    """Generate a hash for a given tensor."""
-    return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
 
 def unbatch_graphs(batch):
     data_list = batch.to_data_list()
@@ -30,85 +25,44 @@ def load_embeddings_map(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
 
-def get_embeddings(model, dataloader, device):
+
+def evaluate_similarity(test_dataset, model, hist_bins, title, device='cuda', saving_path=None):
+    
+    test_dataloader = get_dataloader(config, test_dataset, is_train=False)
+    
+    model = model.to(device)
     model.eval()
-    graph_embeddings_map = {}
-    text_embeddings_map = {}
+    
+    hist_true = []
+    hist_false = []
 
     with torch.no_grad():
-        for batch in tqdm(dataloader, desc="Generating embeddings"):
-            input_graphs, texts = batch
+        for batch in tqdm(test_dataloader, desc="Generating embeddings"):
+            input_graphs, texts, labels = batch
             input_graphs = input_graphs.to(device)
             texts = texts.to(device)
-            # Unbatch graphs and texts
-            graph_data_list = unbatch_graphs(input_graphs)
+            # # Unbatch graphs and texts
+            # graph_data_list = unbatch_graphs(input_graphs)
 
             graph_embeddings, text_embeddings = model(input_graphs, texts)
 
-            # Unbatch graphs and texts
-            texts_list = torch.split(texts, 1, dim=0)
-
-            for graph_data, graph_embedding, text, text_embedding in zip(graph_data_list, graph_embeddings, texts_list, text_embeddings):
-                graph_tensor = graph_data.x.cpu()
-                graph_hash = hash_tensor(graph_tensor)
-                text_hash = hash_tensor(text.cpu())
-
-                graph_embeddings_map[graph_hash] = graph_embedding.cpu().numpy()
-                text_embeddings_map[text_hash] = text_embedding.cpu().numpy()
-
-    return graph_embeddings_map, text_embeddings_map
-
-def evaluate_similarity(train_dataloader, test_dataloader, model, index_map, evaluation_map, hist_bins, device='cuda', saving_path=None):
-    model = model.to(device)
-    
-    # if saving_path and os.path.exists(saving_path):
-    #     train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map = load_embeddings_map(saving_path)
-    # else:
-    train_graph_embeddings_map, train_text_embeddings_map = get_embeddings(model, train_dataloader, device)
-    test_graph_embeddings_map, test_text_embeddings_map = get_embeddings(model, test_dataloader, device)
-    
-    if saving_path:
-        save_embeddings_map(saving_path, (train_graph_embeddings_map, train_text_embeddings_map, test_graph_embeddings_map, test_text_embeddings_map))
-    
-
-    histogram_1 = []
-    histogram_2 = []
-    histogram_3 = []
-    histogram_4 = []
-    
-    counter = 0
-
-    for (graph_hash, prompt_hash) in index_map.values():
-        eval_score = evaluation_map[(graph_hash, prompt_hash)]
-        if graph_hash in test_graph_embeddings_map and prompt_hash in test_text_embeddings_map:
-            test_graph_embedding = test_graph_embeddings_map[graph_hash]
-            test_prompt_embedding = test_text_embeddings_map[prompt_hash]
-            counter += 1
-            if graph_hash in train_graph_embeddings_map:
-                if eval_score:
-                    histogram_1.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+            for graph_embedding, text_embedding, label in zip(graph_embeddings, text_embeddings, labels):
+                if label == True:
+                    hist_true.append(cosine_similarity([graph_embedding], [text_embedding])[0][0])
+                elif label == False:
+                    hist_false.append(cosine_similarity([graph_embedding], [text_embedding])[0][0])
                 else:
-                    histogram_2.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
-            else:
-                if eval_score:
-                    histogram_3.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
-                else:
-                    histogram_4.append(cosine_similarity([test_graph_embedding], [test_prompt_embedding])[0][0])
+                    raise Exception(f'type label: {type(label)}, instead of bool')
                     
-    print(f"evaluated pairs: {counter}")
 
     # Log histograms to wandb using wandb.Table and wandb.plot.histogram
     def log_histogram(data, title):
         table = wandb.Table(data=[[x] for x in data], columns=["value"])
-        histogram = wandb.plot.histogram(table, value='value', title=title)
-        wandb.log({title: histogram})
+        histogram = wandb.plot.histogram(table, value='cosine similarity', title=title)
+        wandb.log({title: histogram})    
 
-    log_histogram(histogram_1, "Known graph association test, eval=true")
-    log_histogram(histogram_2, "Known graph association test, eval=false")
-    log_histogram(histogram_3, "Generation metric test, eval=true")
-    log_histogram(histogram_4, "Generation metric test, eval=false")
-
-    return histogram_1, histogram_2, histogram_3, histogram_4
+    log_histogram(hist_true, f"{title}, evaluation = 1")
+    log_histogram(hist_false, f"{title}, evaluation = 0")
 
 if __name__ == "__main__":
     from ebiose_clgp.trainer.utils import mkdir, load_config_file
@@ -166,8 +120,7 @@ if __name__ == "__main__":
     
     print("model evaluation...")
     # Evaluate similarity and log histograms
-    train_dataloader = get_dataloader(config, train_dataset, is_train=False)
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
-    evaluate_similarity(train_dataloader, test_dataloader, model, dataset.index_map, dataset.evaluation_map, config.eval_hist_bins, config.device, config.embbeddings_saving_path)
+    evaluate_similarity(test_dataloader, model, config.eval_hist_bins, config.device, config.embbeddings_saving_path)
     print("done")
     wandb.finish()
