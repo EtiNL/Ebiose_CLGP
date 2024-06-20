@@ -71,7 +71,7 @@ class CLGP_Ebiose_dataset(Dataset):
                 data.append((processed_graph, tokenized_prompt, pair_eval))
                 self.index_map[len(data) - 1] = (graph_hash, prompt_hash, pair_eval)
                 
-        print("end creating pairs")
+        print("done")
         return data
 
     def tokenize_prompt(self, text):
@@ -167,6 +167,7 @@ class CLGP_Ebiose_dataset(Dataset):
         return data['data'], data['index_map']
 
     def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 10, train_ratio=0.8, val_ratio=0.2):
+        print("begin dataset split...")
         total_pairs = len(self.data)
         all_indices = list(range(total_pairs))
         
@@ -221,6 +222,8 @@ class CLGP_Ebiose_dataset(Dataset):
         test_dataset_cat_1 = Subset(self, cat_1)
         test_dataset_cat_2 = Subset(self, cat_2)
         test_dataset_cat_3 = Subset(self, cat_3)
+        
+        print("done")
         
         return train_dataset, val_dataset, test_dataset_cat_1, test_dataset_cat_2, test_dataset_cat_3
     
