@@ -33,7 +33,7 @@ def evaluate_similarity(config, test_dataset, model, title):
     
     device = config.device
     saving_path = config.embbeddings_saving_path
-    hist_bins = config.config.eval_hist_bins
+    hist_bins = config.get('eval_hist_bins', 30)
     
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
     
