@@ -55,9 +55,9 @@ def evaluate_similarity(config, test_dataset, model, title):
 
             for graph_embedding, text_embedding, label in zip(graph_embeddings, text_embeddings, labels):
                 if label == 1:
-                    hist_true.append(cosine_similarity([graph_embedding], [text_embedding])[0][0])
+                    hist_true.append(cosine_similarity([graph_embedding.cpu()], [text_embedding.cpu()])[0][0])
                 elif label == 0:
-                    hist_false.append(cosine_similarity([graph_embedding], [text_embedding])[0][0])
+                    hist_false.append(cosine_similarity([graph_embedding.cpu()], [text_embedding.cpu()])[0][0])
                 else:
                     try:
                         print(f"label shape: {label.shape}")
