@@ -66,7 +66,7 @@ class CLGP_Ebiose_dataset(Dataset):
                 graph_hash = self.hash_tensor(node_features_tensor)
                 prompt_hash = self.hash_tensor(tokenized_prompt)
                 
-                pair_eval = evaluations['evaluations'][i]
+                pair_eval = torch.tensor([1]) if evaluations['evaluations'][i] else torch.tensor([0])
                 
                 data.append((processed_graph, tokenized_prompt, pair_eval))
                 self.index_map[len(data) - 1] = (graph_hash, prompt_hash, pair_eval)
