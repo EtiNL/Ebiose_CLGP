@@ -51,7 +51,7 @@ class CLGP_Ebiose_dataset(Dataset):
             self.prompts_data = validation_set["question"]
             self.index_map = {}
             self.data = self.create_data_and_index_map()
-            self.save_pairs_and_maps(dataset_file_path)
+            self.save_data_and_maps(dataset_file_path)
 
     def create_data_and_index_map(self):
         print("creating pairs...")
@@ -151,7 +151,7 @@ class CLGP_Ebiose_dataset(Dataset):
         """Generate a hash for a given tensor."""
         return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
 
-    def save_pairs_and_maps(self, file_path):
+    def save_data_and_maps(self, file_path):
         """Save the pairs and related maps to a pickle file."""
         data = {
             'data': self.data,
