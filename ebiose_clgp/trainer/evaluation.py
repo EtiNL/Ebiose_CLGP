@@ -64,7 +64,8 @@ def evaluate_similarity(config, test_dataset, model, title):
                         print(f"label shape: {label.shape}")
                     except:
                         raise Exception(f'type label: {type(label)}, instead of int or array_like')  
-    assert graph_embedding.shape == [config.embed_dim] and text_embedding.shape == [config.embed_dim], f"graph_embedding.shape: {graph_embedding.shape},  text_embedding.shape: {text_embedding.shape}"
+    
+    assert graph_embedding.shape == torch.Size([config.embed_dim]) and text_embedding.shape == torch.Size([config.embed_dim]), f"graph_embedding.shape: {graph_embedding.shape},  text_embedding.shape: {text_embedding.shape}"
 
     log_histogram(hist_true, f"{title}, evaluation = 1")
     log_histogram(hist_false, f"{title}, evaluation = 0")
