@@ -153,12 +153,15 @@ class CLGP_Ebiose_dataset(Dataset):
 
     def save_data_and_maps(self, file_path):
         """Save the pairs and related maps to a pickle file."""
+        print(f"saving dataset to {file_path}...")
         data = {
             'data': self.data,
             'index_map': self.index_map
         }
         with open(file_path, 'wb') as f:
             pkl.dump(data, f)
+            
+        print("done")
 
     def load_data_and_index_map(self, file_path):
         """Load the pairs and related maps from a pickle file."""

@@ -48,12 +48,16 @@ def evaluate_similarity(test_dataset, model, hist_bins, title, device='cuda', sa
             graph_embeddings, text_embeddings = model(input_graphs, texts)
 
             for graph_embedding, text_embedding, label in zip(graph_embeddings, text_embeddings, labels):
-                if label == True:
+                if label == 1:
                     hist_true.append(cosine_similarity([graph_embedding], [text_embedding])[0][0])
-                elif label == False:
+                elif label == 0:
                     hist_false.append(cosine_similarity([graph_embedding], [text_embedding])[0][0])
                 else:
-                    raise Exception(f'type label: {type(label)}, instead of bool')
+                    try:
+                        print(f"label shape: {label.shape}")
+                    except:
+                        raise Exception(f'type label: {type(label)}, instead of bool')
+                    
                     
 
     # Log histograms to wandb using wandb.Table and wandb.plot.histogram
