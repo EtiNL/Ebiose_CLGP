@@ -40,27 +40,22 @@ class CLGP_Ebiose_dataset(Dataset):
                 dataset_file_path = dataset_file_path.rstrip('.zip')+'.pkl' # Update the path to the unzipped file
                 print("done")
             print("loading dataset...")
-            self.pairs, self.graph_hashmap, self.prompt_hashmap, self.evaluation_map, self.index_map = self.load_pairs_and_maps(dataset_file_path)
+            self.data, self.index_map = self.load_data_and_index_map(dataset_file_path)
             print("done")
         else:
             print(f"dataset_file_path: {dataset_file_path} doesn't exist")
             with open(self.config.graph_data_file, 'r') as f:
-                self.graph_data = []
-                for line in f:
-                    self.graph_data.append(json.loads(line))
+                self.graph_data = [json.loads(line) for line in f]
 
             validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
             self.prompts_data = validation_set["question"]
-            self.graph_hashmap = {}
-            self.prompt_hashmap = {}
-            self.evaluation_map = {}
             self.index_map = {}
-            self.pairs = self.create_pairs()
+            self.data = self.create_data_and_index_map()
             self.save_pairs_and_maps(dataset_file_path)
 
-    def create_pairs(self):
+    def create_data_and_index_map(self):
         print("creating pairs...")
-        pairs = []
+        data = []
         for idx, (graph, evaluations) in enumerate(tqdm(self.graph_data)):
             for i in range(len(evaluations['evaluations'])):
                 processed_graph = self.process_graph(graph['graph'])
@@ -70,16 +65,14 @@ class CLGP_Ebiose_dataset(Dataset):
 
                 graph_hash = self.hash_tensor(node_features_tensor)
                 prompt_hash = self.hash_tensor(tokenized_prompt)
-
-                self.graph_hashmap[graph_hash] = processed_graph
-                self.prompt_hashmap[prompt_hash] = tokenized_prompt
-                self.evaluation_map[(graph_hash, prompt_hash)] = evaluations['evaluations'][i]
                 
-                pairs.append((processed_graph, tokenized_prompt))
-                self.index_map[len(pairs) - 1] = (graph_hash, prompt_hash, evaluations['evaluations'][i])
+                pair_eval = evaluations['evaluations'][i]
+                
+                data.append((processed_graph, tokenized_prompt, pair_eval))
+                self.index_map[len(data) - 1] = (graph_hash, prompt_hash, pair_eval)
                 
         print("end creating pairs")
-        return pairs
+        return data
 
     def tokenize_prompt(self, text):
         max_length = self.prompt_context_length
@@ -98,10 +91,10 @@ class CLGP_Ebiose_dataset(Dataset):
             return padded_features
 
     def __len__(self):
-        return len(self.pairs)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        return self.pairs[idx]
+        return self.data[idx]
 
     def process_graph(self, graph_struct):
         # Extract node features
@@ -161,24 +154,20 @@ class CLGP_Ebiose_dataset(Dataset):
     def save_pairs_and_maps(self, file_path):
         """Save the pairs and related maps to a pickle file."""
         data = {
-            'pairs': self.pairs,
-            'graph_hashmap': self.graph_hashmap,
-            'prompt_hashmap': self.prompt_hashmap,
-            'evaluation_map': self.evaluation_map,
+            'data': self.data,
             'index_map': self.index_map
         }
         with open(file_path, 'wb') as f:
             pkl.dump(data, f)
 
-    def load_pairs_and_maps(self, file_path):
+    def load_data_and_index_map(self, file_path):
         """Load the pairs and related maps from a pickle file."""
         with open(file_path, 'rb') as f:
             data = pkl.load(f)
-        return data['pairs'], data['graph_hashmap'], data['prompt_hashmap'], data['evaluation_map'], data['index_map']
+        return data['data'], data['index_map']
 
     def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 10, train_ratio=0.8, val_ratio=0.2):
-        
-        total_pairs = len(self.pairs)
+        total_pairs = len(self.data)
         all_indices = list(range(total_pairs))
         
         isolated_prompt_indices = random.sample(all_indices, num_isolated_prompts)
@@ -186,23 +175,19 @@ class CLGP_Ebiose_dataset(Dataset):
         indices_to_transfer = []
         
         for id_x in isolated_prompt_indices:
-            graph_id, prompt_id = self.index_map[id_x]
-            # print(len(indices_to_transfer), len(remaining_indices))
-            assert len(indices_to_transfer) != len(remaining_indices), "no remaining indices during prompt isolation filter"
+            graph_id, prompt_id, _ = self.index_map[id_x]
             for id_y in remaining_indices:
                 if prompt_id == self.index_map[id_y][1]:
                     indices_to_transfer.append(id_y)
                     
         isolated_prompt_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
-        remaining_indices = list(set(remaining_indices)-set(indices_to_transfer))
+        remaining_indices = list(set(remaining_indices) - set(indices_to_transfer))
 
-        # Randomly select indices for isolated graphs
         isolated_graph_indices = random.sample(isolated_prompt_indices, num_isolated_graphs)
         indices_to_transfer = []
         
         for id_x in isolated_graph_indices:
-            graph_id, prompt_id = self.index_map[id_x]
-            assert len(indices_to_transfer) != len(remaining_indices), "no remaining indices during graph isolation filter"
+            graph_id, prompt_id, _ = self.index_map[id_x]
             for id_y in remaining_indices:
                 if graph_id == self.index_map[id_y][0]:
                     indices_to_transfer.append(id_y)
@@ -210,18 +195,9 @@ class CLGP_Ebiose_dataset(Dataset):
         test_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
         remaining_indices = list(set(remaining_indices) - set(indices_to_transfer))
         
-        wandb.config["num_isolated_prompts"] = num_isolated_prompts
-        wandb.config["num_isolated_graphs"] = num_isolated_graphs
-        wandb.config["len(test_indices)"] = len(test_indices)
-        wandb.config["len(remaining_indices)"] = len(remaining_indices)
-        # print(f"num_isolated_prompts: {num_isolated_prompts}, num_isolated_graphs: {num_isolated_graphs}")
-        # print(f"len(test_indices): {len(test_indices)}, len(remaining_indices): {len(remaining_indices)})
-        
-        # Compute the number of training and validation samples
         num_train = int(train_ratio * len(remaining_indices))
         num_val = int(val_ratio * len(remaining_indices))
         
-        # Randomly split the remaining indices into training and validation sets
         random.shuffle(remaining_indices)
         train_indices = remaining_indices[:num_train]
         val_indices = remaining_indices[num_train:num_train + num_val]
@@ -230,4 +206,46 @@ class CLGP_Ebiose_dataset(Dataset):
         self.val_indices = val_indices
         self.test_indices = test_indices
         
-        return Subset(self, train_indices), Subset(self, val_indices), Subset(self, test_indices)
+        cat_1, cat_2, cat_3 = self.categorize_test_indices()
+        
+        wandb.config["num_isolated_prompts"] = num_isolated_prompts
+        wandb.config["num_isolated_graphs"] = num_isolated_graphs
+        wandb.config["num test cat_1"] = len(cat_1)
+        wandb.config["num test cat_2"] = len(cat_2)
+        wandb.config["num test cat_3"] = len(cat_3)
+        
+        print("test categories populations:", len(cat_1), len(cat_2), len(cat_3))
+        
+        train_dataset = Subset(self, train_indices)
+        val_dataset = Subset(self, val_indices)
+        test_dataset_cat_1 = Subset(self, cat_1)
+        test_dataset_cat_2 = Subset(self, cat_2)
+        test_dataset_cat_3 = Subset(self, cat_3)
+        
+        return train_dataset, val_dataset, test_dataset_cat_1, test_dataset_cat_2, test_dataset_cat_3
+    
+    def categorize_test_indices(self):
+        train_val_indices = self.train_indices + self.val_indices
+        
+        train_val_graphs = set()
+        train_val_prompts = set()
+        
+        for idx in train_val_indices:
+            graph_id, prompt_id, _ = self.index_map[idx]
+            train_val_graphs.add(graph_id)
+            train_val_prompts.add(prompt_id)
+        
+        category_1 = [] # graph_id not in train_val_graphs and prompt_id in train_val_prompts
+        category_2 = [] # prompt_id not in train_val_prompts and graph_id in train_val_graphs
+        category_3 = [] # graph_id not in train_val_graphs and prompt_id not in train_val_prompts
+        
+        for idx in self.test_indices:
+            graph_id, prompt_id, _ = self.index_map[idx]
+            if graph_id not in train_val_graphs and prompt_id in train_val_prompts:
+                category_1.append(idx)
+            elif prompt_id not in train_val_prompts and graph_id in train_val_graphs:
+                category_2.append(idx)
+            elif graph_id not in train_val_graphs and prompt_id not in train_val_prompts:
+                category_3.append(idx)
+        
+        return category_1, category_2, category_3
