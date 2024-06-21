@@ -65,7 +65,7 @@ def train(config, train_dataset, val_dataset, model):
 
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
     optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
-    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=int(0.2 * t_total), num_training_steps=t_total)
+    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
 
     if config.n_gpu > 1:
         model = torch.nn.DataParallel(model)
@@ -75,7 +75,6 @@ def train(config, train_dataset, val_dataset, model):
 
     scaler = GradScaler()
     criterion = InfoNCELoss(temperature=config.temperature)
-    
     
     wandb.config.update({
         "learning_rate": config.optimizer.lr,
