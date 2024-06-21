@@ -64,8 +64,16 @@ def train(config, train_dataset, val_dataset, model):
     val_dataloader = get_dataloader(config, val_dataset, is_train=False)
 
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
-    optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
-    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
+    
+    # Separate optimizers for text_encoder and graph_encoder
+    text_encoder_params = model.text_encoder.parameters()
+    graph_encoder_params = model.graph_encoder.parameters()
+
+    optimizer_text = AdamW(text_encoder_params, lr=config.text_encoder_lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
+    optimizer_graph = AdamW(graph_encoder_params, lr=config.graph_encoder_lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
+    
+    scheduler_text = get_cosine_schedule_with_warmup(optimizer_text, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
+    scheduler_graph = get_cosine_schedule_with_warmup(optimizer_graph, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
 
     if config.n_gpu > 1:
         model = torch.nn.DataParallel(model)
@@ -77,7 +85,8 @@ def train(config, train_dataset, val_dataset, model):
     criterion = InfoNCELoss(temperature=config.temperature)
     
     wandb.config.update({
-        "learning_rate": config.optimizer.lr,
+        "text_encoder_learning_rate": config.text_encoder_lr,
+        "graph_encoder_learning_rate": config.graph_encoder_lr,
         "batch_size": config.train_batch_size,
         "epochs": config.num_train_epochs,
         "weight_decay": config.optimizer.weight_decay,
@@ -108,24 +117,25 @@ def train(config, train_dataset, val_dataset, model):
             clip_grad_norm_(model.parameters(), max_norm=1.0)
             if (step + 1) % config.gradient_accumulation_steps == 0:
                 global_step += 1
-                scaler.step(optimizer)
+                scaler.step(optimizer_text)
+                scaler.step(optimizer_graph)
                 scaler.update()
-                optimizer.zero_grad()
-                scheduler.step()
+                optimizer_text.zero_grad()
+                optimizer_graph.zero_grad()
+                scheduler_text.step()
+                scheduler_graph.step()
             
                 if global_step % config.logging_steps == 0:
-                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': scheduler.get_last_lr()[0]}, step=global_step)
+                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr_text': scheduler_text.get_last_lr()[0], 'lr_graph': scheduler_graph.get_last_lr()[0]}, step=global_step)
                     
                 if global_step % config.eval_steps == 0:
                     val_loss = evaluate(config, model, val_dataloader)
                     wandb.log({'val_loss': val_loss}, step=global_step)
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
-                save_checkpoint(config, epoch, global_step, model, optimizer)
+                save_checkpoint(config, epoch, global_step, model, optimizer_text, optimizer_graph)
 
-    
-
-def save_checkpoint(config, epoch, global_step, model, optimizer):
+def save_checkpoint(config, epoch, global_step, model, optimizer_text, optimizer_graph):
     '''
     Checkpointing. Saves model and optimizer state_dict() and current epoch and global training steps.
     '''
@@ -138,14 +148,16 @@ def save_checkpoint(config, epoch, global_step, model, optimizer):
                     'epoch': epoch,
                     'global_step': global_step,
                     'model_state_dict': model.module.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()
+                    'optimizer_text_state_dict': optimizer_text.state_dict(),
+                    'optimizer_graph_state_dict': optimizer_graph.state_dict()
                 }, checkpoint_path)
             else:
                 torch.save({
                     'epoch': epoch,
                     'global_step': global_step,
                     'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()
+                    'optimizer_text_state_dict': optimizer_text.state_dict(),
+                    'optimizer_graph_state_dict': optimizer_graph.state_dict()
                 }, checkpoint_path)
                 
             wandb.save(checkpoint_path)
