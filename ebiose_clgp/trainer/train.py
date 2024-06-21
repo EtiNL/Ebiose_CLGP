@@ -75,8 +75,6 @@ def train(config, train_dataset, val_dataset, model):
     scheduler_text = get_cosine_schedule_with_warmup(optimizer_text, num_warmup_steps=int(0.08 * t_total), num_training_steps=t_total)
     scheduler_graph = get_cosine_schedule_with_warmup(optimizer_graph, num_warmup_steps=int(0.08 * t_total), num_training_steps=t_total)
     
-    print("config.optimizer.text_encoder_lr: ", config.optimizer.text_encoder_lr)
-    
     if config.n_gpu > 1:
         model = torch.nn.DataParallel(model)
     
