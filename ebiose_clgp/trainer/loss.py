@@ -35,11 +35,11 @@ class InfoNCELoss(nn.Module):
         similarity_matrix = torch.matmul(output1, output2.T)  # [batch_size, batch_size]
 
         # Ensure labels are on the same device as the similarity_matrix
-        labels = labels.cuda() if output1.is_cuda else labels
+        labels = labels.view(-1)
         
         # Debug print for label shape
-        print(f"Labels shape: {labels.shape}")
-        print(f"Labels: {labels}")
+        # print(f"Labels shape: {labels.shape}")
+        # print(f"Labels: {labels}")
 
         # Compute logits
         logits = similarity_matrix / self.temperature
