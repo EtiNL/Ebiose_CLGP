@@ -13,6 +13,6 @@ embbeddings_saving_path: 'Embeddings_3'
 saved_model: 'Model_checkpoints/exalted-grass-134_checkpoint_0_101.pt'
 
 optimizer:
-  lr: 0.00001
+  lr: 0.000002
   eps: 0.00000001
-  weight_decay: 0.1
+  weight_decay: 0.0001
