@@ -12,8 +12,10 @@ from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
 from ebiose_clgp.model.CLGP import CLGP
 from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, set_seed
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
+from ebiose_clgp.trainer.evaluation import evaluate_similarity
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 from ebiose_clgp.model.text_encoders.bert import get_Bert
+from ebiose_clgp.trainer.loss import ContrastiveLoss, InfoNCELoss
 
 from torch.optim import AdamW
 
@@ -31,33 +33,22 @@ def log_gradients(model, step):
 def evaluate(config, model, validation_dataloader):
     model.eval()
     total_loss = 0.0
+    criterion = InfoNCELoss(temperature=config.temperature)
     with torch.no_grad():
         for step, batch in enumerate(validation_dataloader):
-            input_graphs, input_texts = batch
+            input_graphs, input_texts, labels = batch
 
             input_graphs = input_graphs.to(torch.device(config.device))
             input_texts = input_texts.to(torch.device(config.device))
+            labels = labels.to(torch.device(config.device))
             
             graph_features, text_features = model(input_graphs, input_texts)
 
             graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
             
-            if config.n_gpu <= 1:
-                logit_scale = model.logit_scale.exp()
-            elif config.n_gpu > 1:
-                logit_scale = model.module.logit_scale.exp()
-
-            logits_per_graph = logit_scale * graph_features @ text_features.t()
-            logits_per_text = logit_scale * text_features @ graph_features.t()
-
-            labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
-
-            graph_loss = F.cross_entropy(logits_per_graph, labels)
-            text_loss = F.cross_entropy(logits_per_text, labels)
-
-            loss = (graph_loss + text_loss) / 2
-
+            loss = criterion(graph_features, text_features, labels)
+            
             if config.n_gpu > 1: 
                 loss = loss.mean()
 
@@ -72,20 +63,18 @@ def train(config, train_dataset, val_dataset, model):
     train_dataloader = get_dataloader(config, train_dataset, is_train=True)
     val_dataloader = get_dataloader(config, val_dataset, is_train=False)
 
-    # Total training iterations
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
-    
     optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
-
-    # Warmup iterations = 20% of total iterations
-    num_warmup_steps = int(0.20 * t_total)
-    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=t_total)
+    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
 
     if config.n_gpu > 1:
         model = torch.nn.DataParallel(model)
     
-    model = model.to(torch.device(config.device))
+    model.to(torch.device(config.device))
     model.train()
+
+    scaler = GradScaler()
+    criterion = InfoNCELoss(temperature=config.temperature)
     
     wandb.config.update({
         "learning_rate": config.optimizer.lr,
@@ -93,80 +82,48 @@ def train(config, train_dataset, val_dataset, model):
         "epochs": config.num_train_epochs,
         "weight_decay": config.optimizer.weight_decay,
         "eps": config.optimizer.eps,
-        "gradient_accumulation_steps": config.gradient_accumulation_steps
+        "gradient_accumulation_steps": config.gradient_accumulation_steps,
+        "InfoNCE temperature": config.temperature
     })
-
-    global_step, global_loss, global_acc = 0, 0.0, 0.0
-    model.zero_grad()
-
-    scaler = GradScaler()
+    
+    global_step = 0
     
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in tqdm(enumerate(train_dataloader)):
-            # torch.cuda.empty_cache()  # Clear the cache
             with autocast():
-                input_graphs, input_texts = batch
+                input_graphs, input_texts, labels = batch
+                input_graphs = input_graphs.to(config.device)
+                input_texts = input_texts.to(config.device)
+                labels = labels.to(config.device)
 
-                input_graphs = input_graphs.to(torch.device(config.device))
-                input_texts = input_texts.to(torch.device(config.device))
-                
                 graph_features, text_features = model(input_graphs, input_texts)
+                graph_features = F.normalize(graph_features, p=2, dim=-1)
+                text_features = F.normalize(text_features, p=2, dim=-1)
 
-                graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
-                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-                
-                if config.n_gpu <= 1:
-                    logit_scale = model.logit_scale.exp()
-                elif config.n_gpu > 1:
-                    logit_scale = model.module.logit_scale.exp()
-
-                logits_per_graph = logit_scale * graph_features @ text_features.t()
-                logits_per_text = logit_scale * text_features @ graph_features.t()
-
-                labels = torch.arange(len(logits_per_graph)).to(logits_per_graph.device)
-
-                graph_loss = F.cross_entropy(logits_per_graph, labels)
-                text_loss = F.cross_entropy(logits_per_text, labels)
-
-                loss = (graph_loss + text_loss) / 2
-
-                if config.n_gpu > 1: 
-                    loss = loss.mean()
+                loss = criterion(graph_features, text_features, labels)
                 if config.gradient_accumulation_steps > 1:
-                    loss = loss / config.gradient_accumulation_steps
+                    loss /= config.gradient_accumulation_steps
 
             scaler.scale(loss).backward()
-
-            # Clip gradients
             clip_grad_norm_(model.parameters(), max_norm=1.0)
-
             if (step + 1) % config.gradient_accumulation_steps == 0:
                 global_step += 1
                 scaler.step(optimizer)
                 scaler.update()
-                
-                if config.n_gpu == 1:
-                    model.logit_scale.data = torch.clamp(model.logit_scale.data, 0, 4.6052)
-                elif config.n_gpu > 1:
-                    model.module.logit_scale.data = torch.clamp(model.module.logit_scale.data, 0, 4.6052)
-
                 optimizer.zero_grad()
-
-                if scheduler:
-                    scheduler.step()
-
+                scheduler.step()
+            
                 if global_step % config.logging_steps == 0:
-                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]}, step=global_step)
-                    # log_gradients(model, global_step)
-
+                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': scheduler.get_last_lr()[0]}, step=global_step)
+                    
                 if global_step % config.eval_steps == 0:
                     val_loss = evaluate(config, model, val_dataloader)
                     wandb.log({'val_loss': val_loss}, step=global_step)
 
             if (config.save_steps > 0 and global_step % config.save_steps == 0) or global_step == t_total:
                 save_checkpoint(config, epoch, global_step, model, optimizer)
+
     
-    return global_step, global_loss / global_step
 
 def save_checkpoint(config, epoch, global_step, model, optimizer):
     '''
@@ -227,17 +184,26 @@ def main():
         config.embed_dim = 768 #Bert embbeding dimension
     
     config.model_save_name = wandb.run.name
-        
+    
     set_seed(seed=11, n_gpu=config.n_gpu)
     
     model = CLGP(config, model)
 
     dataset = CLGP_Ebiose_dataset(config, tokenizer=tokenizer)
-    train_dataset, val_dataset, test_dataset = dataset.train_validation_test_split()
+    train_dataset, val_dataset, test_dataset_cat_1, test_dataset_cat_2, test_dataset_cat_3 = dataset.train_validation_test_split()
 
-    global_step, avg_loss = train(config, train_dataset, val_dataset, model)
+    print("training...")
+    config.temperature = 0.1
+    train(config, train_dataset, val_dataset, model)
+    torch.cuda.empty_cache()
+    print("done")
     
-    print("Training done: total_step = {}, avg loss = {}".format(global_step, avg_loss))
+    print("model evaluation...")
+    evaluate_similarity(config, test_dataset_cat_1, model, 'test prompt & trainned graph')
+    evaluate_similarity(config, test_dataset_cat_2, model, 'trainned prompt & test graph')
+    evaluate_similarity(config, test_dataset_cat_3, model, 'test prompt & test graph')
+    print("done")
+    wandb.finish()
 
 if __name__ == "__main__":
     main()

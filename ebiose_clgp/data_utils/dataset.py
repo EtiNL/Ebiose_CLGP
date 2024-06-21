@@ -1,9 +1,15 @@
-from torch.utils.data import Dataset, random_split
+from torch.utils.data import Dataset, random_split, Subset
 import torch
 import pickle as pkl
 import json
 from tokenizers import Tokenizer
-from torch_geometric.data import Data
+import hashlib
+from tqdm import tqdm
+import random
+import numpy as np
+import os
+import wandb
+import zipfile
 
 class CLGP_Ebiose_dataset(Dataset):
     """CLGP_Ebiose_dataset. To train CLGP on prompt-graphs pairs."""
@@ -23,24 +29,50 @@ class CLGP_Ebiose_dataset(Dataset):
             self.custom_tokenizer = False
             self.tokenizer = tokenizer
 
-        with open(self.config.graph_data_file, 'r') as f:
-            self.graph_data = []
-            for line in f:
-                self.graph_data.append(json.loads(line))
+        # Check if the dataset file is zipped and unzip it
+        dataset_file_path = self.config.dataset_file
+        
+        if os.path.exists(dataset_file_path):
+            if dataset_file_path.endswith('.zip'):
+                print('unzipping dataset...')
+                with zipfile.ZipFile(dataset_file_path, 'r') as zip_ref:
+                    zip_ref.extractall(os.path.dirname(dataset_file_path))
+                dataset_file_path = dataset_file_path.rstrip('.zip')+'.pkl' # Update the path to the unzipped file
+                print("done")
+            print("loading dataset...")
+            self.data, self.index_map = self.load_data_and_index_map(dataset_file_path)
+            print("done")
+        else:
+            print(f"dataset_file_path: {dataset_file_path} doesn't exist")
+            with open(self.config.graph_data_file, 'r') as f:
+                self.graph_data = [json.loads(line) for line in f]
 
-        validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
-        self.prompts_data = validation_set["question"]
+            validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
+            self.prompts_data = validation_set["question"]
+            self.index_map = {}
+            self.data = self.create_data_and_index_map()
+            self.save_data_and_maps(dataset_file_path)
 
-        self.pairs = self.create_pairs()
-
-    def create_pairs(self):
-        pairs = []
-        for graph, evaluations in self.graph_data:
+    def create_data_and_index_map(self):
+        print("creating pairs...")
+        data = []
+        for idx, (graph, evaluations) in enumerate(tqdm(self.graph_data)):
             for i in range(len(evaluations['evaluations'])):
-                if evaluations['evaluations'][i]:  # Only consider successful evaluations
-                    prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
-                    pairs.append((graph['graph'], prompt))
-        return pairs
+                processed_graph = self.process_graph(graph['graph'])
+                node_features_tensor, edge_index = processed_graph
+                prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
+                tokenized_prompt = self.tokenize_prompt(prompt)
+
+                graph_hash = self.hash_tensor(node_features_tensor)
+                prompt_hash = self.hash_tensor(tokenized_prompt)
+                
+                pair_eval = torch.tensor([1]) if evaluations['evaluations'][i] else torch.tensor([0])
+                
+                data.append((processed_graph, tokenized_prompt, pair_eval))
+                self.index_map[len(data) - 1] = (graph_hash, prompt_hash, pair_eval)
+                
+        print("done")
+        return data
 
     def tokenize_prompt(self, text):
         max_length = self.prompt_context_length
@@ -52,20 +84,17 @@ class CLGP_Ebiose_dataset(Dataset):
         else:
             tokenized_features = self.tokenizer(text, return_tensors='pt', padding=True, truncation=True)['input_ids'][0]
             if tokenized_features.size(0) < max_length:
-                    padded_features = torch.cat((tokenized_features, torch.zeros(max_length - tokenized_features.size(0), dtype=torch.long)))
+                padded_features = torch.cat((tokenized_features, torch.zeros(max_length - tokenized_features.size(0), dtype=torch.long)))
             else:
                 padded_features = tokenized_features[:max_length]
                 
             return padded_features
 
     def __len__(self):
-        return len(self.pairs)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        graph, question = self.pairs[idx]
-        graph_input = self.process_graph(graph)
-        text_input = self.tokenize_prompt(question)
-        return graph_input, text_input
+        return self.data[idx]
 
     def process_graph(self, graph_struct):
         # Extract node features
@@ -117,9 +146,112 @@ class CLGP_Ebiose_dataset(Dataset):
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
 
         return (node_features_tensor, edge_index)
+
+    def hash_tensor(self, tensor):
+        """Generate a hash for a given tensor."""
+        return hashlib.sha256(tensor.numpy().tobytes()).hexdigest()
+
+    def save_data_and_maps(self, file_path):
+        """Save the pairs and related maps to a pickle file."""
+        print(f"saving dataset to {file_path}...")
+        data = {
+            'data': self.data,
+            'index_map': self.index_map
+        }
+        with open(file_path, 'wb') as f:
+            pkl.dump(data, f)
+            
+        print("done")
+
+    def load_data_and_index_map(self, file_path):
+        """Load the pairs and related maps from a pickle file."""
+        with open(file_path, 'rb') as f:
+            data = pkl.load(f)
+        return data['data'], data['index_map']
+
+    def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 10, train_ratio=0.8, val_ratio=0.2):
+        print("begin dataset split...")
+        total_pairs = len(self.data)
+        all_indices = list(range(total_pairs))
+        
+        isolated_prompt_indices = random.sample(all_indices, num_isolated_prompts)
+        remaining_indices = list(set(all_indices) - set(isolated_prompt_indices))
+        indices_to_transfer = []
+        
+        for id_x in isolated_prompt_indices:
+            graph_id, prompt_id, _ = self.index_map[id_x]
+            for id_y in remaining_indices:
+                if prompt_id == self.index_map[id_y][1]:
+                    indices_to_transfer.append(id_y)
+                    
+        isolated_prompt_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
+        remaining_indices = list(set(remaining_indices) - set(indices_to_transfer))
+
+        isolated_graph_indices = random.sample(isolated_prompt_indices, num_isolated_graphs)
+        indices_to_transfer = []
+        
+        for id_x in isolated_graph_indices:
+            graph_id, prompt_id, _ = self.index_map[id_x]
+            for id_y in remaining_indices:
+                if graph_id == self.index_map[id_y][0]:
+                    indices_to_transfer.append(id_y)
+                    
+        test_indices = list(set(isolated_prompt_indices) | set(indices_to_transfer))
+        remaining_indices = list(set(remaining_indices) - set(indices_to_transfer))
+        
+        num_train = int(train_ratio * len(remaining_indices))
+        num_val = int(val_ratio * len(remaining_indices))
+        
+        random.shuffle(remaining_indices)
+        train_indices = remaining_indices[:num_train]
+        val_indices = remaining_indices[num_train:num_train + num_val]
+        
+        self.train_indices = train_indices
+        self.val_indices = val_indices
+        self.test_indices = test_indices
+        
+        cat_1, cat_2, cat_3 = self.categorize_test_indices()
+        
+        wandb.config["num_isolated_prompts"] = num_isolated_prompts
+        wandb.config["num_isolated_graphs"] = num_isolated_graphs
+        wandb.config["num test cat_1"] = len(cat_1)
+        wandb.config["num test cat_2"] = len(cat_2)
+        wandb.config["num test cat_3"] = len(cat_3)
+        
+        print("test categories populations:", len(cat_1), len(cat_2), len(cat_3))
+        
+        train_dataset = Subset(self, train_indices)
+        val_dataset = Subset(self, val_indices)
+        test_dataset_cat_1 = Subset(self, cat_1)
+        test_dataset_cat_2 = Subset(self, cat_2)
+        test_dataset_cat_3 = Subset(self, cat_3)
+        
+        print("done")
+        
+        return train_dataset, val_dataset, test_dataset_cat_1, test_dataset_cat_2, test_dataset_cat_3
     
-    def train_validation_test_split(self, train_ratio=0.8, val_ratio=0.1):
-        train_size = int(train_ratio * len(self))
-        val_size = int(val_ratio * len(self))
-        test_size = len(self) - train_size - val_size
-        return random_split(self, [train_size, val_size, test_size])
+    def categorize_test_indices(self):
+        train_val_indices = self.train_indices + self.val_indices
+        
+        train_val_graphs = set()
+        train_val_prompts = set()
+        
+        for idx in train_val_indices:
+            graph_id, prompt_id, _ = self.index_map[idx]
+            train_val_graphs.add(graph_id)
+            train_val_prompts.add(prompt_id)
+        
+        category_1 = [] # graph_id not in train_val_graphs and prompt_id in train_val_prompts
+        category_2 = [] # prompt_id not in train_val_prompts and graph_id in train_val_graphs
+        category_3 = [] # graph_id not in train_val_graphs and prompt_id not in train_val_prompts
+        
+        for idx in self.test_indices:
+            graph_id, prompt_id, _ = self.index_map[idx]
+            if graph_id not in train_val_graphs and prompt_id in train_val_prompts:
+                category_1.append(idx)
+            elif prompt_id not in train_val_prompts and graph_id in train_val_graphs:
+                category_2.append(idx)
+            elif graph_id not in train_val_graphs and prompt_id not in train_val_prompts:
+                category_3.append(idx)
+        
+        return category_1, category_2, category_3

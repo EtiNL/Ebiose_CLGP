@@ -1,15 +1,18 @@
-per_gpu_train_batch_size: 32
+per_gpu_train_batch_size: 64
 per_gpu_eval_batch_size: 128
 logging_steps: 50
 eval_steps: 50
-gradient_accumulation_steps: 8
-num_train_epochs: 20
+gradient_accumulation_steps: 4
+num_train_epochs: 5
 train_batch_size: 32
 model_save_name: 'CLGP_V1.pth'
-saved_checkpoints: 'Model checkpoints'
-save_steps: 100
+saved_checkpoints: 'Model_checkpoints'
+save_steps: 0
+eval_hist_bins: 30
+embbeddings_saving_path: 'Embeddings_3'
+saved_model: 'Model_checkpoints/exalted-grass-134_checkpoint_0_101.pt'
 
 optimizer:
-  lr: 0.00001
+  lr: 0.00002
   eps: 0.00000001
-  weight_decay: 0.1
+  weight_decay: 0.0001
