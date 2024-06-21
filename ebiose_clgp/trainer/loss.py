@@ -21,7 +21,12 @@ class ContrastiveLoss(nn.Module):
 
         return loss_contrastive
     
-def forward(self, output1, output2, labels):
+class InfoNCELoss(nn.Module):
+    def __init__(self, temperature=0.1):  # Adjust the temperature as needed
+        super(InfoNCELoss, self).__init__()
+        self.temperature = temperature
+
+    def forward(self, output1, output2, labels):
         # Normalize the embeddings
         output1 = F.normalize(output1, p=2, dim=1)
         output2 = F.normalize(output2, p=2, dim=1)
@@ -31,6 +36,10 @@ def forward(self, output1, output2, labels):
 
         # Ensure labels are on the same device as the similarity_matrix
         labels = labels.cuda() if output1.is_cuda else labels
+        
+        # Debug print for label shape
+        print(f"Labels shape: {labels.shape}")
+        print(f"Labels: {labels}")
 
         # Compute logits
         logits = similarity_matrix / self.temperature  # [batch_size]
