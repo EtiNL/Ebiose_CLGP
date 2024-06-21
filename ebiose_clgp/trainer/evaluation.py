@@ -52,6 +52,9 @@ def evaluate_similarity(config, test_dataset, model, title):
             text_embeddings = F.normalize(text_embeddings, p=2, dim=-1)
 
             similarities = F.cosine_similarity(graph_embeddings, text_embeddings)
+            
+            print(similarities.shape)
+            breakpoint()
 
             for similarity, label in zip(similarities, labels):
                 if label == 1:
