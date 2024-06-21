@@ -85,8 +85,8 @@ def train(config, train_dataset, val_dataset, model):
     criterion = InfoNCELoss(temperature=config.temperature)
     
     wandb.config.update({
-        "text_encoder_learning_rate": config.text_encoder_lr,
-        "graph_encoder_learning_rate": config.graph_encoder_lr,
+        "text_encoder_learning_rate": config.optimizer.text_encoder_lr,
+        "graph_encoder_learning_rate": config.optimizer.graph_encoder_lr,
         "batch_size": config.train_batch_size,
         "epochs": config.num_train_epochs,
         "weight_decay": config.optimizer.weight_decay,
