@@ -7,7 +7,7 @@ num_train_epochs: 5
 train_batch_size: 32
 model_save_name: 'CLGP_V1.pth'
 saved_checkpoints: 'Model_checkpoints'
-save_steps: 1000
+save_steps: 0
 eval_hist_bins: 30
 embbeddings_saving_path: 'Embeddings_3'
 saved_model: 'Model_checkpoints/exalted-grass-134_checkpoint_0_101.pt'
