@@ -31,11 +31,7 @@ def log_histogram(data, title):
 
 
 def evaluate_similarity(config, test_dataset, model, title):
-    
     device = config.device
-    saving_path = config.embbeddings_saving_path
-    hist_bins = config.get('eval_hist_bins', 30)
-    
     test_dataloader = get_dataloader(config, test_dataset, is_train=False)
     
     model = model.to(device)
@@ -49,24 +45,20 @@ def evaluate_similarity(config, test_dataset, model, title):
             input_graphs, texts, labels = batch
             input_graphs = input_graphs.to(device)
             texts = texts.to(device)
-            # # Unbatch graphs and texts
-            # graph_data_list = unbatch_graphs(input_graphs)
+            labels = labels.to(device)
 
             graph_embeddings, text_embeddings = model(input_graphs, texts)
-            
+            graph_embeddings = F.normalize(graph_embeddings, p=2, dim=-1)
+            text_embeddings = F.normalize(text_embeddings, p=2, dim=-1)
+
             similarities = F.cosine_similarity(graph_embeddings, text_embeddings)
 
-            for graph_embedding, text_embedding, label, similarity in zip(graph_embeddings, text_embeddings, labels, similarities):
+            for similarity, label in zip(similarities, labels):
                 if label == 1:
-                    hist_true.append(similarity)
+                    hist_true.append(similarity.item())
                 elif label == 0:
-                    hist_false.append(similarity)
-                else:
-                    try:
-                        print(f"label shape: {label.shape}")
-                    except:
-                        raise Exception(f'type label: {type(label)}, instead of int or array_like')  
-
+                    hist_false.append(similarity.item())
+    
     log_histogram(hist_true, f"{title}, evaluation = 1")
     log_histogram(hist_false, f"{title}, evaluation = 0")
 

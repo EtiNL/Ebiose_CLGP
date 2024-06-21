@@ -64,20 +64,19 @@ def train(config, train_dataset, val_dataset, model):
     train_dataloader = get_dataloader(config, train_dataset, is_train=True)
     val_dataloader = get_dataloader(config, val_dataset, is_train=False)
 
-    # Total training iterations
     t_total = len(train_dataloader) // config.gradient_accumulation_steps * config.num_train_epochs
-    
     optimizer = AdamW(model.parameters(), lr=config.optimizer.lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
-
-    # Warmup iterations = 20% of total iterations
-    num_warmup_steps = int(0.2 * t_total)
-    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=t_total)
+    scheduler = get_cosine_schedule_with_warmup(optimizer, num_warmup_steps=int(0.2 * t_total), num_training_steps=t_total)
 
     if config.n_gpu > 1:
         model = torch.nn.DataParallel(model)
     
-    model = model.to(torch.device(config.device))
+    model.to(torch.device(config.device))
     model.train()
+
+    scaler = GradScaler()
+    criterion = ContrastiveLoss(margin=-1.0)
+    
     
     wandb.config.update({
         "learning_rate": config.optimizer.lr,
@@ -87,58 +86,37 @@ def train(config, train_dataset, val_dataset, model):
         "eps": config.optimizer.eps,
         "gradient_accumulation_steps": config.gradient_accumulation_steps
     })
-
+    
     global_step = 0
-    model.zero_grad()
-
-    scaler = GradScaler()
-    criterion = ContrastiveLoss(margin=1.0)  # Define the contrastive loss criterion
     
     for epoch in range(int(config.num_train_epochs)):
         for step, batch in tqdm(enumerate(train_dataloader)):
             with autocast():
                 input_graphs, input_texts, labels = batch
+                input_graphs = input_graphs.to(config.device)
+                input_texts = input_texts.to(config.device)
+                labels = labels.to(config.device)
 
-                input_graphs = input_graphs.to(torch.device(config.device))
-                input_texts = input_texts.to(torch.device(config.device))
-                labels = labels.to(torch.device(config.device))
-                
                 graph_features, text_features = model(input_graphs, input_texts)
+                graph_features = F.normalize(graph_features, p=2, dim=-1)
+                text_features = F.normalize(text_features, p=2, dim=-1)
 
-                graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
-                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-
-                # Calculate the contrastive loss
                 loss = criterion(graph_features, text_features, labels)
-
-                if config.n_gpu > 1: 
-                    loss = loss.mean()
                 if config.gradient_accumulation_steps > 1:
-                    loss = loss / config.gradient_accumulation_steps
+                    loss /= config.gradient_accumulation_steps
 
             scaler.scale(loss).backward()
-
-            # Clip gradients
             clip_grad_norm_(model.parameters(), max_norm=1.0)
-
             if (step + 1) % config.gradient_accumulation_steps == 0:
                 global_step += 1
                 scaler.step(optimizer)
                 scaler.update()
-                
-                if config.n_gpu == 1:
-                    model.logit_scale.data = torch.clamp(model.logit_scale.data, 0, 4.6052)
-                elif config.n_gpu > 1:
-                    model.module.logit_scale.data = torch.clamp(model.module.logit_scale.data, 0, 4.6052)
-
                 optimizer.zero_grad()
-
-                if scheduler:
-                    scheduler.step()
-
+                scheduler.step()
+            
                 if global_step % config.logging_steps == 0:
-                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': optimizer.param_groups[0]["lr"]}, step=global_step)
-
+                    wandb.log({'epoch': epoch, 'loss': loss.item(), 'lr': scheduler.get_last_lr()[0]}, step=global_step)
+                    
                 if global_step % config.eval_steps == 0:
                     val_loss = evaluate(config, model, val_dataloader)
                     wandb.log({'val_loss': val_loss}, step=global_step)
