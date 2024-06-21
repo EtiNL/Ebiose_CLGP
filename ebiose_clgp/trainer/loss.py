@@ -22,7 +22,7 @@ class ContrastiveLoss(nn.Module):
         return loss_contrastive
     
 class InfoNCELoss(nn.Module):
-    def __init__(self, temperature=0.5):
+    def __init__(self, temperature=0.1):  # Adjust the temperature as needed
         super(InfoNCELoss, self).__init__()
         self.temperature = temperature
 
@@ -30,18 +30,22 @@ class InfoNCELoss(nn.Module):
         # Normalize the embeddings
         output1 = F.normalize(output1, p=2, dim=1)
         output2 = F.normalize(output2, p=2, dim=1)
-
+        
         # Compute pairwise cosine similarity between output1 and output2
         similarity_matrix = torch.matmul(output1, output2.T)  # [batch_size, batch_size]
 
-        # Labels are indices of the correct matches
+        # Ensure labels are on the same device as the similarity_matrix
         labels = labels.cuda() if output1.is_cuda else labels
+        
+        # Debug print for label shape
+        print(f"Labels shape: {labels.shape}")
+        print(f"Labels: {labels}")
 
         # Compute logits
         logits = similarity_matrix / self.temperature
-
+        
         # Compute loss using CrossEntropyLoss
         criterion = nn.CrossEntropyLoss()
         loss = criterion(logits, labels)
-
+        
         return loss
