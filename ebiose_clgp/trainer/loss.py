@@ -30,22 +30,22 @@ class InfoNCELoss(nn.Module):
         # Normalize the embeddings
         output1 = F.normalize(output1, p=2, dim=1)
         output2 = F.normalize(output2, p=2, dim=1)
-        
+
         # Compute pairwise cosine similarity between output1 and output2
-        similarity_matrix = torch.matmul(output1, output2.T)  # [batch_size, batch_size]
+        similarity_matrix = torch.sum(output1 * output2, dim=1)  # [batch_size]
 
         # Ensure labels are on the same device as the similarity_matrix
-        labels = labels.view(-1)
+        labels = labels.cuda() if output1.is_cuda else labels
         
         # Debug print for label shape
         # print(f"Labels shape: {labels.shape}")
         # print(f"Labels: {labels}")
 
         # Compute logits
-        logits = similarity_matrix / self.temperature
+        logits = similarity_matrix / self.temperature  # [batch_size]
         
         # Compute loss using CrossEntropyLoss
         criterion = nn.CrossEntropyLoss()
-        loss = criterion(logits, labels)
+        loss = criterion(logits.view(1, -1), labels.view(1, -1))
         
         return loss
