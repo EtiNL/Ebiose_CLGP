@@ -38,8 +38,8 @@ class InfoNCELoss(nn.Module):
         labels = labels.view(-1).cuda() if output1.is_cuda else labels.view(-1)
         
         # Debug print for label shape
-        print(f"Labels shape after reshape: {labels.shape}")
-        print(f"Labels: {labels}")
+        # print(f"Labels shape after reshape: {labels.shape}")
+        # print(f"Labels: {labels}")
 
         # Compute logits
         logits = similarity / self.temperature  # [batch_size]
