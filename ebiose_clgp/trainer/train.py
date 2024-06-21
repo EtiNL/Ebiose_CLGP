@@ -15,7 +15,7 @@ from ebiose_clgp.trainer.utils import mkdir, load_config_file
 from ebiose_clgp.trainer.evaluation import evaluate_similarity
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 from ebiose_clgp.model.text_encoders.bert import get_Bert
-from ebiose_clgp.trainer.loss import ContrastiveLoss
+from ebiose_clgp.trainer.loss import ContrastiveLoss, InfoNCELoss
 
 from torch.optim import AdamW
 
@@ -33,7 +33,7 @@ def log_gradients(model, step):
 def evaluate(config, model, validation_dataloader):
     model.eval()
     total_loss = 0.0
-    criterion = ContrastiveLoss(margin=1.0)  # Define the contrastive loss criterion
+    criterion = InfoNCELoss(temperature=config.temperature)
     with torch.no_grad():
         for step, batch in enumerate(validation_dataloader):
             input_graphs, input_texts, labels = batch
@@ -47,7 +47,6 @@ def evaluate(config, model, validation_dataloader):
             graph_features = graph_features / graph_features.norm(dim=-1, keepdim=True)
             text_features = text_features / text_features.norm(dim=-1, keepdim=True)
             
-            # Calculate the contrastive loss
             loss = criterion(graph_features, text_features, labels)
             
             if config.n_gpu > 1: 
@@ -75,7 +74,7 @@ def train(config, train_dataset, val_dataset, model):
     model.train()
 
     scaler = GradScaler()
-    criterion = ContrastiveLoss(margin=-1.0)
+    criterion = InfoNCELoss(temperature=config.temperature)
     
     
     wandb.config.update({
@@ -84,7 +83,8 @@ def train(config, train_dataset, val_dataset, model):
         "epochs": config.num_train_epochs,
         "weight_decay": config.optimizer.weight_decay,
         "eps": config.optimizer.eps,
-        "gradient_accumulation_steps": config.gradient_accumulation_steps
+        "gradient_accumulation_steps": config.gradient_accumulation_steps,
+        "InfoNCE temperature": config.temperature
     })
     
     global_step = 0
@@ -194,6 +194,7 @@ def main():
     train_dataset, val_dataset, test_dataset_cat_1, test_dataset_cat_2, test_dataset_cat_3 = dataset.train_validation_test_split()
 
     print("training...")
+    config.temperature = 0.1
     train(config, train_dataset, val_dataset, model)
     torch.cuda.empty_cache()
     print("done")
