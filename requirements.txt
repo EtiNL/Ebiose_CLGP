@@ -18,3 +18,4 @@ transformers==4.41.2
 sacremoses
 sentencepiece
 wandb
+pandas==1.5.3
