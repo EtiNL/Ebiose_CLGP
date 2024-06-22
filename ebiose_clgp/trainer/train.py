@@ -16,6 +16,7 @@ from ebiose_clgp.trainer.evaluation import evaluate_similarity
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
 from ebiose_clgp.model.text_encoders.bert import get_Bert
 from ebiose_clgp.trainer.loss import ContrastiveLoss, InfoNCELoss
+from ebiose_clgp.inference.reliability import log_inference_reliability
 
 from torch.optim import AdamW
 
@@ -211,9 +212,16 @@ def main():
     print("done")
     
     print("model evaluation...")
-    evaluate_similarity(config, test_dataset_cat_1, model, 'test prompt & trainned graph')
-    evaluate_similarity(config, test_dataset_cat_2, model, 'trainned prompt & test graph')
-    evaluate_similarity(config, test_dataset_cat_3, model, 'test prompt & test graph')
+    
+    hist_true, hist_false = evaluate_similarity(config, test_dataset_cat_1, model, 'test prompt & trainned graph')
+    log_inference_reliability(hist_true, hist_false, 'test prompt & trainned graph')
+    
+    hist_true, hist_false = evaluate_similarity(config, test_dataset_cat_2, model, 'trainned prompt & test graph')
+    log_inference_reliability(hist_true, hist_false, 'trainned prompt & test graph')
+    
+    hist_true, hist_false = evaluate_similarity(config, test_dataset_cat_3, model, 'test prompt & test graph')
+    log_inference_reliability(hist_true, hist_false, 'test prompt & test graph')
+    
     print("done")
     wandb.finish()
 

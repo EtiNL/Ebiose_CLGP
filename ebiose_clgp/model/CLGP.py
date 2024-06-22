@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from ebiose_clgp.model.graph_encoders.graph_convolutionnal_network import GCN
+from ebiose_clgp.model.graph_encoders.graph_attention_network import GAT
 from ebiose_clgp.model.text_encoders.transformer import Transformer
 
 class CLGP(nn.Module):
@@ -12,19 +13,15 @@ class CLGP(nn.Module):
         self.config = config
 
         if self.config.graph_encoder.name == 'GCN':
-            try:
-                self.graph_encoder = GCN(config)
-            except Exception as e: 
-                raise Exception(f"Problem while instantiating the graph_encoder model: {e}")
+            self.graph_encoder = GCN(config)
+        elif self.config.graph_encoder.name == 'GAT':
+            self.graph_encoder = GAT(config)
         else:
             raise Exception('Invalid config.graph_encoder.name')
-        
+
         if self.config.text_encoder.name == 'Transformer':
-            try:
-                self.custom_text_encoder = True
-                self.text_encoder = Transformer(config, 'prompt')
-            except Exception as e: 
-                raise Exception(f"Problem while instantiating the text_encoder model: {e}")
+            self.custom_text_encoder = True
+            self.text_encoder = Transformer(config, 'prompt')
         elif self.config.text_encoder.name == 'Bert':
             self.custom_text_encoder = False
             self.text_encoder = model
@@ -32,12 +29,8 @@ class CLGP(nn.Module):
             raise Exception('Invalid config.text_encoder.name')
 
         if self.config.node_feature_encoder.name == 'Transformer':
-            try:
-                self.custom_node_feature_encoder = True
-                self.node_feature_encoder = Transformer(config, 'node_feature')
-            except Exception as e:
-                raise Exception(f"Problem while instantiating the node_feature_encoder model: {e}")
-            
+            self.custom_node_feature_encoder = True
+            self.node_feature_encoder = Transformer(config, 'node_feature')
         elif self.config.text_encoder.name == 'Bert':
             self.custom_node_feature_encoder = False
             self.node_feature_encoder = model

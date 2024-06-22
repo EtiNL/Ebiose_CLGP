@@ -61,6 +61,9 @@ def evaluate_similarity(config, test_dataset, model, title):
     
     log_histogram(hist_true, f"{title}, evaluation = 1")
     log_histogram(hist_false, f"{title}, evaluation = 0")
+    
+    return hist_true, hist_false
+    
 
 if __name__ == "__main__":
     # needs to be updated

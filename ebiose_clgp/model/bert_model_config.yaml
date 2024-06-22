@@ -1,7 +1,9 @@
 graph_encoder:
-  name: 'GCN'
+  name: 'GAT' #or GCN
   layers: 4
   hidden: 512
+  dropout: 0.2
+  heads: 4
 
 node_feature_encoder:
   name: 'Bert'
