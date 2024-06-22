@@ -29,12 +29,9 @@ class GAT(nn.Module):
 
     def initialize(self):
         for conv in self.convs:
-            nn.init.xavier_uniform_(conv.lin_src.weight)
-            nn.init.xavier_uniform_(conv.lin_dst.weight)
-            if conv.lin_src.bias is not None:
-                nn.init.zeros_(conv.lin_src.bias)
-            if conv.lin_dst.bias is not None:
-                nn.init.zeros_(conv.lin_dst.bias)
+            nn.init.xavier_uniform_(conv.lin.weight)
+            if conv.lin.bias is not None:
+                nn.init.zeros_(conv.lin.bias)
         nn.init.xavier_uniform_(self.fc.weight)
         nn.init.zeros_(self.fc.bias)
 

@@ -7,7 +7,7 @@ from ebiose_clgp.model.graph_encoders.graph_attention_network import GAT
 from ebiose_clgp.model.text_encoders.transformer import Transformer
 
 class CLGP(nn.Module):
-    def __init__(self, config: dict, model = None):
+    def __init__(self, config: dict, model=None):
         super().__init__()
         
         self.config = config
