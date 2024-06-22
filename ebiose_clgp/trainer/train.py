@@ -69,12 +69,12 @@ def train(config, train_dataset, val_dataset, model):
     text_encoder_params = model.text_encoder.parameters()
     graph_encoder_params = model.graph_encoder.parameters()
 
-    optimizer_text = AdamW(text_encoder_params, lr=config.text_encoder_lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
-    optimizer_graph = AdamW(graph_encoder_params, lr=config.graph_encoder_lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
+    optimizer_text = AdamW(text_encoder_params, lr=config.optimizer.text_encoder_lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
+    optimizer_graph = AdamW(graph_encoder_params, lr=config.optimizer.graph_encoder_lr, eps=config.optimizer.eps, weight_decay=config.optimizer.weight_decay)
     
-    scheduler_text = get_cosine_schedule_with_warmup(optimizer_text, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
-    scheduler_graph = get_cosine_schedule_with_warmup(optimizer_graph, num_warmup_steps=int(0.1 * t_total), num_training_steps=t_total)
-
+    scheduler_text = get_cosine_schedule_with_warmup(optimizer_text, num_warmup_steps=int(0.08 * t_total), num_training_steps=t_total)
+    scheduler_graph = get_cosine_schedule_with_warmup(optimizer_graph, num_warmup_steps=int(0.08 * t_total), num_training_steps=t_total)
+    
     if config.n_gpu > 1:
         model = torch.nn.DataParallel(model)
     
@@ -85,8 +85,8 @@ def train(config, train_dataset, val_dataset, model):
     criterion = InfoNCELoss(temperature=config.temperature)
     
     wandb.config.update({
-        "text_encoder_learning_rate": config.text_encoder_lr,
-        "graph_encoder_learning_rate": config.graph_encoder_lr,
+        "text_encoder_learning_rate": config.optimizer.text_encoder_lr,
+        "graph_encoder_learning_rate": config.optimizer.graph_encoder_lr,
         "batch_size": config.train_batch_size,
         "epochs": config.num_train_epochs,
         "weight_decay": config.optimizer.weight_decay,
