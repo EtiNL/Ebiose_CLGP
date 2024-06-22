@@ -3,7 +3,7 @@ per_gpu_eval_batch_size: 128
 logging_steps: 50
 eval_steps: 50
 gradient_accumulation_steps: 6
-num_train_epochs: 15
+num_train_epochs: 20
 train_batch_size: 32
 saved_checkpoints: 'Model_checkpoints'
 save_steps: 0
