@@ -1,5 +1,5 @@
 graph_encoder:
-  name: 'GAT' #or GCN
+  name: 'GCN' # GCN, GAT
   layers: 4
   hidden: 512
   dropout: 0.2
