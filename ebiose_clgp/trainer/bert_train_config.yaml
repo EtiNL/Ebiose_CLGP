@@ -3,7 +3,7 @@ per_gpu_eval_batch_size: 128
 logging_steps: 50
 eval_steps: 50
 gradient_accumulation_steps: 6
-num_train_epochs: 20
+num_train_epochs: 25
 train_batch_size: 32
 saved_checkpoints: 'Model_checkpoints'
 save_steps: 0
@@ -13,6 +13,6 @@ saved_model: 'Model_checkpoints/exalted-grass-134_checkpoint_0_101.pt'
 
 optimizer:
   text_encoder_lr: 3e-4
-  graph_encoder_lr: 3e-3
+  graph_encoder_lr: 3e-2
   eps: 0.00000001
-  weight_decay: 0.0001
+  weight_decay: 0.01
