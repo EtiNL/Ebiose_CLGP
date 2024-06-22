@@ -1,8 +1,30 @@
 graph_data_file: 'Ebiose_CLGP/ebiose_clgp/data/data.jsonl'
 gsm8k_validation_file: 'Ebiose_CLGP/ebiose_clgp/data/gsm8k-validation.pkl'
 dataset_file: 'Ebiose_CLGP/ebiose_clgp/data/test_data.zip'
+
 prompt_tokenizer: 'Ebiose_CLGP/ebiose_clgp/data_utils/prompt_tokenizer_1.json'
 graph_feature_tokenizer: 'Ebiose_CLGP/ebiose_clgp/data_utils/graph_tokenizer_1.json'
+
 prompt_context_length: 150
 node_feature_context_length: 100
+
 num_workers: 4
+
+graph_augmentation: True
+augmentation_perturb_node_features: True
+noise_factor: 0.01
+
+augmentation_perturb_edges: True
+add_edges: 5
+remove_edges: 5
+
+augmentation_extract_subgraph: True
+subgraph_size: 10
+
+text_augmentation: True
+augmentation_synonym_replacement: True
+num_synonyms: 3
+
+augmentation_back_translation: True
+src_lang: 'en'
+tgt_lang: 'fr'
