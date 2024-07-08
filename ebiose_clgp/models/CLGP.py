@@ -2,9 +2,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
-from ebiose_clgp.model.graph_encoders.graph_convolutionnal_network import GCN
-from ebiose_clgp.model.graph_encoders.graph_attention_network import GAT
-from ebiose_clgp.model.text_encoders.transformer import Transformer
+from ebiose_clgp.models.graph_encoders.graph_convolutionnal_network import GCN
+from ebiose_clgp.models.graph_encoders.graph_attention_network import GAT
+from ebiose_clgp.models.text_encoders.transformer import Transformer
 
 class CLGP(nn.Module):
     def __init__(self, config: dict, model=None):

@@ -9,12 +9,12 @@ from torch.utils.data import DataLoader
 
 from ebiose_clgp.data_utils.dataloader import get_dataloader
 from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
-from ebiose_clgp.model.CLGP import CLGP
+from ebiose_clgp.models.CLGP import CLGP
 from ebiose_clgp.trainer.train_utils import get_cosine_schedule_with_warmup, set_seed
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
 from ebiose_clgp.trainer.evaluation import evaluate_similarity
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
-from ebiose_clgp.model.text_encoders.bert import get_Bert
+from ebiose_clgp.models.text_encoders.bert import get_Bert
 from ebiose_clgp.trainer.loss import ContrastiveLoss, InfoNCELoss
 from ebiose_clgp.inference.reliability import log_inference_reliability
 
@@ -24,7 +24,7 @@ import wandb
 
 DATA_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/data_utils/data_config.yaml'
 TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/bert_train_config.yaml'
-MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/bert_model_config.yaml'
+MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/models/bert_model_config.yaml'
 
 def log_gradients(model, step):
     for name, param in model.named_parameters():

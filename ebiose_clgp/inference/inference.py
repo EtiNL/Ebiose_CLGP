@@ -3,14 +3,14 @@ from omegaconf import OmegaConf
 import wandb
 from ebiose_clgp.trainer.utils import mkdir, load_config_file
 from ebiose_clgp.data_utils.tokenizer import get_max_position_embedding
-from ebiose_clgp.model.CLGP import CLGP
+from ebiose_clgp.models.CLGP import CLGP
 from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
-from ebiose_clgp.model.text_encoders.bert import get_Bert
+from ebiose_clgp.models.text_encoders.bert import get_Bert
 from torch.utils.data import DataLoader
 
 DATA_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/data_utils/data_config.yaml'
 TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/bert_train_config.yaml'
-MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/bert_model_config.yaml'
+MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/models/bert_model_config.yaml'
 
 def load_model(config):
     if config.text_encoder.name == 'Transformer':
@@ -38,10 +38,6 @@ def load_checkpoint(config, model, checkpoint_path):
     else:
         model.load_state_dict(checkpoint['model_state_dict'])
     return model
-
-def prepare_dataloader(config, dataset):
-    dataloader = DataLoader(dataset, batch_size=config.eval_batch_size, num_workers=config.num_workers, collate_fn=collate_graph)
-    return dataloader
 
 def inference(model, dataloader, config):
     model.to(torch.device(config.device))

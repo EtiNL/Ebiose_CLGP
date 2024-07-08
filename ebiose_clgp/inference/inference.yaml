@@ -1,0 +1,2 @@
+inference_batch_size: 12
+inference_prompt_dataset_file: 'Ebiose_CLGP/ebiose_clgp/data/gsm8k-test.pkl'

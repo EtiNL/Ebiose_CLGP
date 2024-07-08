@@ -72,14 +72,14 @@ if __name__ == "__main__":
     from omegaconf import OmegaConf
     from ebiose_clgp.data_utils.dataloader import get_dataloader
     from ebiose_clgp.data_utils.dataset import CLGP_Ebiose_dataset
-    from ebiose_clgp.model.CLGP import CLGP
+    from ebiose_clgp.models.CLGP import CLGP
     from ebiose_clgp.trainer.train_utils import set_seed
     from ebiose_clgp.trainer.evaluation import evaluate_similarity
-    from ebiose_clgp.model.text_encoders.bert import get_Bert
+    from ebiose_clgp.models.text_encoders.bert import get_Bert
     
     DATA_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/data_utils/data_config.yaml'
     TRAINER_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/trainer/bert_train_config.yaml'
-    MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/model/bert_model_config.yaml'
+    MODEL_CONFIG_PATH = 'Ebiose_CLGP/ebiose_clgp/models/bert_model_config.yaml'
     # Load your config, model, and dataloaders
     data_config = load_config_file(DATA_CONFIG_PATH)
     train_config = load_config_file(TRAINER_CONFIG_PATH)

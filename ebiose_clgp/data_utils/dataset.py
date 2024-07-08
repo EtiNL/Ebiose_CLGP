@@ -40,7 +40,7 @@ class CLGP_Ebiose_dataset(Dataset):
                 dataset_file_path = dataset_file_path.rstrip('.zip')+'.pkl' # Update the path to the unzipped file
                 print("done")
             print("loading dataset...")
-            self.data, self.index_map = self.load_data_and_index_map(dataset_file_path)
+            self.data, self.index_map, self.graph_id_map = self.load_data_and_index_map(dataset_file_path)
             print("done")
         else:
             print(f"dataset_file_path: {dataset_file_path} doesn't exist")
@@ -50,6 +50,7 @@ class CLGP_Ebiose_dataset(Dataset):
             validation_set = pkl.load(open(self.config.gsm8k_validation_file, "rb"))
             self.prompts_data = validation_set["question"]
             self.index_map = {}
+            self.graph_id_map = {}
             self.data = self.create_data_and_index_map()
             self.save_data_and_maps(dataset_file_path)
 
@@ -63,6 +64,7 @@ class CLGP_Ebiose_dataset(Dataset):
                 prompt = self.prompts_data[evaluations['dataset_indexes'][i]]
                 tokenized_prompt = self.tokenize_prompt(prompt)
 
+                graph_id = graph['id']
                 graph_hash = self.hash_tensor(node_features_tensor)
                 prompt_hash = self.hash_tensor(tokenized_prompt)
                 
@@ -70,7 +72,7 @@ class CLGP_Ebiose_dataset(Dataset):
                 
                 data.append((processed_graph, tokenized_prompt, pair_eval))
                 self.index_map[len(data) - 1] = (graph_hash, prompt_hash, pair_eval)
-                
+                self.graph_id_map[graph_hash] = graph_id
         print("done")
         return data
 
@@ -156,7 +158,8 @@ class CLGP_Ebiose_dataset(Dataset):
         print(f"saving dataset to {file_path}...")
         data = {
             'data': self.data,
-            'index_map': self.index_map
+            'index_map': self.index_map,
+            'graph_id_map': self.graph_id_map
         }
         with open(file_path, 'wb') as f:
             pkl.dump(data, f)
@@ -167,7 +170,7 @@ class CLGP_Ebiose_dataset(Dataset):
         """Load the pairs and related maps from a pickle file."""
         with open(file_path, 'rb') as f:
             data = pkl.load(f)
-        return data['data'], data['index_map']
+        return data['data'], data['index_map'], data['graph_id_map']
 
     def train_validation_test_split(self, num_isolated_prompts = 10, num_isolated_graphs = 10, train_ratio=0.8, val_ratio=0.2):
         print("begin dataset split...")
