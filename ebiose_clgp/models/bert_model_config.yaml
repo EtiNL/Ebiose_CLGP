@@ -1,7 +1,7 @@
 graph_encoder:
   name: 'GAT' # GCN, GAT
   layers: 4
-  hidden: 512
+  hidden: 768
   dropout: 0.2
   heads: 4
 
