@@ -9,3 +9,4 @@ ebiose_clgp/data/graph_question_links_3d.html
 ebiose_clgp/data/embeddings.zip
 *.csv
 trainned_models/*
+ebiose_clgp/data/test_data.pkl
